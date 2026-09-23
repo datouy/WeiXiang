@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>群像谱 · 微信聊天记录分析</title>
+<style>
+:root{--bg:#EEF0F2;--surface:#fff;--line:#DDE1E5;--ink:#15181C;--muted:#6B737E;--accent:#0E6E6C;--self:#A8322A}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:960px;margin:0 auto;padding:32px 20px 80px}
+header.top{margin-bottom:28px}
+.kicker{font-size:12px;letter-spacing:.14em;color:var(--accent);font-weight:700;text-transform:uppercase}
+h1{font-size:30px;margin:8px 0 4px;font-weight:700}
+h1 em{font-style:normal;color:var(--accent)}
+.lede{color:var(--muted);font-size:14px;line-height:1.7;margin:8px 0 20px}
+.search{width:100%;padding:13px 16px;font-size:15px;border:1px solid var(--line);border-radius:10px;background:var(--surface);outline:none;margin-bottom:16px}
+.search:focus{border-color:var(--accent)}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:13px;color:var(--muted)}
+.tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:.15s}
+.item:hover{border-color:var(--accent);box-shadow:0 2px 12px -6px rgba(20,24,28,.2)}
+.item .avatar{width:40px;height:40px;border-radius:10px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff}
+.avatar.group{background:var(--accent)}.avatar.contact{background:#3A5691}.avatar.official{background:#9A6414}
+.item .name{font-weight:600;font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .meta{font-size:12px;color:var(--muted);flex:0 0 auto}
+.kindtag{font-size:11px;padding:2px 7px;border-radius:5px;background:#E4E7EB;color:var(--muted);flex:0 0 auto}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.loading{padding:40px;text-align:center;color:var(--muted)}
+#overlay{position:fixed;inset:0;background:rgba(20,24,28,.45);display:none;align-items:center;justify-content:center;z-index:50}
+#overlay.show{display:flex}
+.card{background:#fff;border-radius:16px;padding:32px;max-width:420px;text-align:center}
+.spinner{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;margin:0 auto 16px;animation:s .8s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="kicker">WECHAT INSIGHT</div>
+    <h1>群像谱 <em>·</em> 聊天记录分析</h1>
+    <p class="lede">选一个群或一个好友，自动解析本地聊天记录，生成人物关系网、画像与时间线。纯本地统计，不调用模型、不上传数据。</p>
+    <input class="search" id="q" placeholder="搜索群名 / 好友名 / 备注 / wxid…" autocomplete="off">
+    <div class="tabs" id="tabs">
+      <div class="tab on" data-k="all">全部</div>
+      <div class="tab" data-k="group">群聊</div>
+      <div class="tab" data-k="contact">好友</div>
+      <div class="tab" data-k="official">公众号</div>
+    </div>
+  </header>
+  <div id="list" class="list"><div class="loading">加载中…</div></div>
+</div>
+
+<div id="overlay"><div class="card"><div class="spinner"></div><div id="ovt">正在解析聊天记录…</div></div></div>
+
+<script>
+let chats = [];
+const $ = s => document.querySelector(s);
+const kindName = {group:"群聊",contact:"好友",official:"公众号"};
+const kindIcon = {group:"群",contact:"人",official:"号"};
+
+async function load(){
+  const r = await fetch('/api/chats');
+  chats = await r.json();
+  render();
+}
+function render(){
+  const q = ($('#q').value||'').trim().toLowerCase();
+  const k = document.querySelector('.tab.on').dataset.k;
+  const box = $('#list');
+  const items = chats.filter(c => {
+    if(k!=='all' && c.kind!==k) return false;
+    if(!q) return true;
+    return (c.name||'').toLowerCase().includes(q) || c.username.toLowerCase().includes(q);
+  });
+  if(!items.length){ box.innerHTML = '<div class="empty">没有匹配的会话</div>'; return; }
+  box.innerHTML = items.slice(0,300).map(c => `
+    <div class="item" data-u="${c.username}" data-n="${(c.name||'').replace(/"/g,'&quot;')}">
+      <div class="avatar ${c.kind}">${kindIcon[c.kind]||'?'}</div>
+      <div class="name">${esc(c.name||c.username)}</div>
+      <div class="kindtag">${kindName[c.kind]||c.kind}</div>
+      ${c.member_count?`<div class="meta">${c.member_count}人</div>`:''}
+    </div>`).join('');
+  box.querySelectorAll('.item').forEach(el => el.addEventListener('click', () => analyze(el.dataset.u, el.dataset.n)));
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+async function analyze(u,n){
+  $('#overlay').classList.add('show');
+  $('#ovt').textContent = `正在解析「${n}」的聊天记录，通常需要 10~60 秒…`;
+  try{
+    const r = await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({talker:u})});
+    if(!r.ok){ const e = await r.json(); throw new Error(e.detail||'分析失败'); }
+    const d = await r.json();
+    window.location.href = d.url;
+  }catch(e){
+    $('#overlay').classList.remove('show');
+    alert('分析失败：'+e.message);
+  }
+}
+$('#q').addEventListener('input', render);
+$('#tabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab'); if(!t) return;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on'); render();
+});
+load();
+</script>
+</body>
+</html>

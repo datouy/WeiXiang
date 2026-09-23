@@ -1,0 +1,30 @@
+# ===== 私人数据：严禁提交 =====
+# 解密后的微信聊天库（含全部私人聊天记录）
+data/
+# 生成的群像谱报告（含私人聊天内容）
+outputs/
+# 探索性脚本与中间产物
+_probe/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+envs/
+*.db
+*.sqlite
+*.sqlite3
+*.wal
+*.shm
+
+# ===== 工具 / IDE 缓存 =====
+.workbuddy/
+.idea/
+.vscode/
+*.log
+
+# ===== 系统 =====
+.DS_Store
+Thumbs.db

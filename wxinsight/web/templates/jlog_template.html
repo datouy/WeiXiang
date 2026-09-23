@@ -1,0 +1,1237 @@
+<title>JLog 群像谱</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+/* ============ 设计令牌:亮色为基,暗色只重定义令牌 ============ */
+:root{
+  --ground:#EEF0F2;
+  --surface:#FFFFFF;
+  --surface-2:#F7F8F9;
+  --line:#DDE1E5;
+  --line-strong:#C3C9D0;
+  --ink:#15181C;
+  --ink-2:#3D444D;
+  --muted:#6B737E;
+  --faint:#9AA1AB;
+
+  --accent:#0E6E6C;         /* 青碧 —— 引力中心 */
+  --accent-soft:#D8EAE9;
+  --self:#A8322A;           /* 朱砂 —— 你自己 */
+  --key:#9A6414;            /* 琥珀 —— 关键人物 */
+
+  --foe:#B23A2E;            /* 宿敌 */
+  --ally:#3C7350;           /* 同盟 */
+  --real:#9A6414;           /* 现实关系 */
+  --trade:#3A5691;          /* 交易/供应链 */
+  --meme:#6E5C82;           /* 梗/被讨论 */
+
+  --node-member:#8C949E;
+  --node-member-fill:#E4E7EB;
+
+  --shadow:0 1px 2px rgba(20,24,28,.06),0 8px 24px -12px rgba(20,24,28,.18);
+  --shadow-sm:0 1px 2px rgba(20,24,28,.07);
+
+  --serif:"Noto Serif SC",Songti SC,SimSun,Georgia,serif;
+  --sans:"Noto Sans SC",PingFang SC,Hiragino Sans GB,Microsoft YaHei,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#111316;
+    --surface:#191C21;
+    --surface-2:#1E2228;
+    --line:#2A2F36;
+    --line-strong:#3B424B;
+    --ink:#E9EBEE;
+    --ink-2:#C2C8D0;
+    --muted:#8E96A1;
+    --faint:#6A727D;
+
+    --accent:#5CBDB6;
+    --accent-soft:#16302F;
+    --self:#E0705F;
+    --key:#D2A04A;
+
+    --foe:#E0705F;
+    --ally:#6FB183;
+    --real:#D2A04A;
+    --trade:#7B9BD8;
+    --meme:#A98FC4;
+
+    --node-member:#79818C;
+    --node-member-fill:#242930;
+
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.7);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#111316;
+  --surface:#191C21;
+  --surface-2:#1E2228;
+  --line:#2A2F36;
+  --line-strong:#3B424B;
+  --ink:#E9EBEE;
+  --ink-2:#C2C8D0;
+  --muted:#8E96A1;
+  --faint:#6A727D;
+
+  --accent:#5CBDB6;
+  --accent-soft:#16302F;
+  --self:#E0705F;
+  --key:#D2A04A;
+
+  --foe:#E0705F;
+  --ally:#6FB183;
+  --real:#D2A04A;
+  --trade:#7B9BD8;
+  --meme:#A98FC4;
+
+  --node-member:#79818C;
+  --node-member-fill:#242930;
+
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.7);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  max-width:1240px;
+  margin:0 auto;
+  padding-block:0 72px;
+  padding-inline:20px;
+  display:flex;
+  flex-direction:column;
+  gap:56px;
+}
+
+/* ============ 页头 ============ */
+header.top{
+  padding-block:52px 0;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+.kicker{
+  font-family:var(--mono);
+  font-size:11.5px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--muted);
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.kicker::after{
+  content:"";
+  flex:1;
+  height:1px;
+  background:var(--line);
+}
+h1{
+  font-family:var(--serif);
+  font-weight:700;
+  font-size:clamp(38px,7vw,68px);
+  line-height:1.06;
+  letter-spacing:-.015em;
+  margin:0;
+  text-wrap:balance;
+}
+h1 em{
+  font-style:normal;
+  color:var(--accent);
+}
+.lede{
+  margin:0;
+  max-width:64ch;
+  font-size:16.5px;
+  color:var(--ink-2);
+  text-wrap:pretty;
+}
+.lede code{
+  font-family:var(--mono);
+  font-size:.87em;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:1px 5px;
+}
+
+/* 统计条 */
+.stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:1px;
+  background:var(--line);
+  border:1px solid var(--line);
+  border-radius:10px;
+  overflow:hidden;
+}
+.stat{
+  background:var(--surface);
+  padding:16px 18px 15px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.stat b{
+  font-family:var(--mono);
+  font-weight:500;
+  font-size:24px;
+  letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;
+  color:var(--ink);
+}
+.stat span{
+  font-size:12.5px;
+  color:var(--muted);
+}
+.stat.hi b{color:var(--accent)}
+
+/* ============ 通用区块 ============ */
+section{display:flex;flex-direction:column;gap:20px}
+h2{
+  font-family:var(--serif);
+  font-weight:700;
+  font-size:clamp(22px,3.4vw,31px);
+  line-height:1.2;
+  letter-spacing:-.01em;
+  margin:0;
+  text-wrap:balance;
+}
+.sub{
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  max-width:70ch;
+  text-wrap:pretty;
+}
+
+/* ============ 图区 ============ */
+.graph-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 330px;
+  gap:16px;
+  align-items:start;
+}
+@media (max-width:900px){
+  .graph-grid{grid-template-columns:minmax(0,1fr)}
+}
+.panel{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:12px;
+  box-shadow:var(--shadow-sm);
+}
+#graphPanel{
+  position:relative;
+  overflow:hidden;
+  background:var(--surface);
+}
+#cv{display:block;width:100%;touch-action:none;cursor:grab}
+#cv.dragging{cursor:grabbing}
+
+.legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px 16px;
+  padding:13px 16px;
+  border-top:1px solid var(--line);
+  background:var(--surface-2);
+}
+.legend div{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-size:12.5px;
+  color:var(--ink-2);
+}
+.swatch{
+  width:16px;height:3px;border-radius:2px;flex:none;
+}
+.swatch.dotb{width:11px;height:11px;border-radius:50%}
+
+/* 详情面板 */
+#detail{
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  min-height:280px;
+}
+#detail .ph{
+  color:var(--muted);
+  font-size:13.5px;
+  line-height:1.75;
+}
+#detail .ph b{color:var(--ink-2);font-weight:500}
+.d-name{
+  font-family:var(--serif);
+  font-weight:700;
+  font-size:23px;
+  line-height:1.25;
+  letter-spacing:-.01em;
+  margin:0;
+}
+.d-tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{
+  font-size:11.5px;
+  font-family:var(--mono);
+  padding:2.5px 8px;
+  border-radius:5px;
+  border:1px solid var(--line-strong);
+  color:var(--muted);
+  white-space:nowrap;
+}
+.tag.hub{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.tag.self{background:var(--self);border-color:transparent;color:#fff}
+.tag.key{background:var(--key);border-color:transparent;color:#fff}
+.d-meta{
+  font-family:var(--mono);
+  font-size:11.5px;
+  color:var(--faint);
+  word-break:break-all;
+  line-height:1.6;
+}
+.d-row{
+  display:flex;
+  gap:10px;
+  font-size:13.5px;
+  line-height:1.65;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+}
+.d-row .k{
+  flex:none;
+  width:52px;
+  color:var(--faint);
+  font-size:12px;
+  padding-top:2px;
+}
+.d-row .v{color:var(--ink-2);flex:1;min-width:0}
+.d-row .v em{font-style:normal;color:var(--ink);font-weight:500}
+.quote{
+  border-left:2px solid var(--line-strong);
+  padding-left:11px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.7;
+}
+
+/* ============ 主轴卡 ============ */
+.axes{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:14px}
+.axis{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:19px 19px 17px;
+  display:flex;
+  flex-direction:column;
+  gap:11px;
+  box-shadow:var(--shadow-sm);
+  border-top:3px solid var(--foe);
+}
+.axis .who{
+  font-family:var(--serif);
+  font-weight:700;
+  font-size:17.5px;
+  line-height:1.35;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:0 8px;
+}
+.axis .who i{
+  font-style:normal;
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--faint);
+  font-weight:400;
+}
+.axis .why{font-size:13.5px;color:var(--ink-2);line-height:1.7;margin:0}
+.axis .why em{font-style:normal;color:var(--ink);font-weight:500;background:var(--accent-soft);padding:0 3px;border-radius:3px}
+.axis .q{
+  font-size:12.5px;
+  color:var(--muted);
+  line-height:1.65;
+  padding-top:10px;
+  border-top:1px dashed var(--line);
+  font-family:var(--mono);
+}
+
+/* ============ 名册 ============ */
+.roster{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:var(--shadow-sm);
+}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+th{
+  font-size:11.5px;
+  font-family:var(--mono);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted);
+  font-weight:500;
+  background:var(--surface-2);
+  white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+td.num{
+  font-family:var(--mono);
+  font-variant-numeric:tabular-nums;
+  text-align:right;
+  color:var(--ink-2);
+  white-space:nowrap;
+}
+td.nm{font-weight:500;white-space:nowrap}
+td.nm .real{color:var(--accent);font-family:var(--mono);font-size:11.5px;display:block;font-weight:400}
+td.ds{color:var(--muted);font-size:12.5px;min-width:190px}
+.rowself{background:var(--accent-soft)}
+.rowself td.nm{color:var(--self)}
+
+/* ============ 时间线 ============ */
+.tl{display:flex;flex-direction:column;gap:0}
+.ev{
+  display:grid;
+  grid-template-columns:112px minmax(0,1fr);
+  gap:18px;
+  padding:15px 0;
+  border-top:1px solid var(--line);
+}
+.ev:last-child{border-bottom:1px solid var(--line)}
+.ev .d{
+  font-family:var(--mono);
+  font-size:12.5px;
+  color:var(--muted);
+  padding-top:2px;
+  white-space:nowrap;
+}
+.ev .t{font-size:14px;line-height:1.68;color:var(--ink-2)}
+.ev .t b{color:var(--ink);font-weight:500}
+.ev .t code{
+  font-family:var(--mono);
+  font-size:.86em;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:1px 4px;
+  color:var(--ink-2);
+}
+.ev.milestone .t b::before{
+  content:"◆";
+  color:var(--foe);
+  font-size:.7em;
+  margin-right:6px;
+  vertical-align:1px;
+}
+
+/* ============ 指令矩阵 ============ */
+.cmds{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:12px;
+}
+.cmd{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:15px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  box-shadow:var(--shadow-sm);
+}
+.cmd code.sl{
+  font-family:var(--mono);
+  font-size:14px;
+  font-weight:500;
+  color:var(--accent);
+}
+.cmd .arrow{font-size:13px;color:var(--ink-2);line-height:1.65}
+.cmd .arrow b{color:var(--ink);font-weight:500}
+.cmd .note{
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.6;
+  padding-top:9px;
+  border-top:1px dashed var(--line);
+}
+
+/* ============ 改名表 ============ */
+.ren{
+  display:flex;
+  flex-direction:column;
+  gap:0;
+}
+.ren .r{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 26px minmax(0,1fr) minmax(0,150px);
+  gap:10px;
+  align-items:center;
+  padding:11px 0;
+  border-top:1px solid var(--line);
+  font-size:13.5px;
+}
+.ren .r:last-child{border-bottom:1px solid var(--line)}
+.ren .old{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--faint)}
+.ren .new{color:var(--ink);font-weight:500}
+.ren .a{color:var(--faint);text-align:center;font-family:var(--mono)}
+.ren .id{font-family:var(--mono);font-size:11.5px;color:var(--faint);text-align:right;word-break:break-all}
+@media (max-width:640px){
+  .ren .r{grid-template-columns:minmax(0,1fr);gap:2px}
+  .ren .a{text-align:left}
+  .ren .id{text-align:left}
+  .ev{grid-template-columns:1fr;gap:4px}
+  th:nth-child(4),td:nth-child(4){display:none}
+}
+
+/* ============ 脚注 / 边界声明 ============ */
+.note-box{
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-left:3px solid var(--key);
+  border-radius:0 10px 10px 0;
+  padding:17px 19px;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+}
+.note-box h3{
+  margin:0;
+  font-family:var(--serif);
+  font-size:15.5px;
+  font-weight:700;
+}
+.note-box ul{
+  margin:0;
+  padding-left:19px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:13.5px;
+  color:var(--ink-2);
+  line-height:1.7;
+}
+.note-box li::marker{color:var(--faint)}
+.note-box code{font-family:var(--mono);font-size:.87em;color:var(--muted)}
+
+footer{
+  font-size:12.5px;
+  color:var(--faint);
+  font-family:var(--mono);
+  line-height:1.8;
+  padding-top:8px;
+  border-top:1px solid var(--line);
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="kicker">JLog备用群 · 56639685459@chatroom · 260 人</div>
+  <h1>JLog <em>群像谱</em></h1>
+  <p class="lede">
+    2026-08-28 → 09-23,31 天、<b>81,481 行</b>群记录、110 位发言者。这不是一份"谁跟谁关系好"的名单 ——
+    这个群的社交结构由<b>四条互相咬合的对抗轴</b>撑起来,其余所有人都是围着这四条轴看戏、拱火、站队或做生意的。
+    下图的连线全部来自<b>引用回复</b>与<b>@提及</b>的机械统计,不是印象。
+  </p>
+  <div class="stats">
+    <div class="stat hi"><b>22,761</b><span>解析出的消息条数</span></div>
+    <div class="stat"><b>110</b><span>发过言的账号</span></div>
+    <div class="stat"><b>2,937</b><span>单人最高发言(职业鉴黄师)</span></div>
+    <div class="stat"><b>132</b><span>最紧密一对的互回次数</span></div>
+    <div class="stat"><b>09-11</b><span>/指令 矩阵上线日</span></div>
+  </div>
+</header>
+
+<section>
+  <h2>关系网</h2>
+  <p class="sub">点节点看画像,拖动可重排。节点大小 = 发言量;连线颜色 = 关系类型。灰色小点是潜水或低频成员,只画出发言量靠前的一批。</p>
+  <div class="graph-grid">
+    <div class="panel" id="graphPanel">
+      <canvas id="cv" aria-label="JLog 群人物关系网络图"></canvas>
+      <div class="legend">
+        <div><span class="swatch" style="background:var(--foe)"></span>宿敌 / 对喷</div>
+        <div><span class="swatch" style="background:var(--ally)"></span>同盟 / 捧哏</div>
+        <div><span class="swatch" style="background:var(--real)"></span>现实关系</div>
+        <div><span class="swatch" style="background:var(--trade)"></span>交易 / 供应链</div>
+        <div><span class="swatch" style="background:var(--meme)"></span>梗 / 被讨论</div>
+        <div><span class="swatch dotb" style="background:var(--key)"></span>关键人物</div>
+        <div><span class="swatch dotb" style="background:var(--accent)"></span>引力中心</div>
+        <div><span class="swatch dotb" style="background:var(--self)"></span>你自己</div>
+      </div>
+    </div>
+    <div class="panel" id="detail">
+      <p class="ph">点左边任意一个点,这里会展开那个人的画像 —— 身份、立场、和谁结的梁子、原话证据。</p>
+      <p class="ph" style="margin-top:4px"><b>想快速看懂的话,先点这四个:</b><br>
+      <b>职业鉴黄师</b> · <b>小中头</b> · <b>快乐小王</b> · <b>leo头</b></p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>四条主轴</h2>
+  <p class="sub">群里 90% 的争吵都能追溯到这四条。它们不是同时开始的 —— 前两条贯穿全月,后两条是 09-17 之后才烧起来的。</p>
+  <div class="axes" id="axes"></div>
+</section>
+
+<section>
+  <h2>/指令 矩阵 <span style="font-family:var(--mono);font-size:13px;color:var(--muted);font-weight:400">— 09-11 才上线</span></h2>
+  <p class="sub">
+    这个群最反常识的一点:<code>聊天记录里出现的 <b>/名字</b> 指令,绝大部分不是机器人在回,而是被点名的那<b>本人</b>在回</b>。
+    群友把彼此当成 CLI 调用 —— 罗鹏的原话是「这是那位,怎么见你一直把他当插件用」。真正确认有 AI 实体的只有 <code>/小王</code>。
+  </p>
+  <div class="cmds" id="cmds"></div>
+</section>
+
+<section>
+  <h2>发言量名册</h2>
+  <p class="sub">按 31 天总条数排序。真实姓名只列聊天记录里被明确写出过的 —— 这个群有把真名挂在昵称上的习惯(<code>本人为李岚峰的活爹</code>)。</p>
+  <div class="roster">
+    <table>
+      <thead><tr><th>#</th><th>群昵称</th><th style="text-align:right">条数</th><th>已知身份 / 定位</th></tr></thead>
+      <tbody id="rosterBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>改名映射</h2>
+  <p class="sub">
+    看这个群的历史必须知道这一层:群友改昵称极频繁,而<b>引用回复里保留的是引用者通讯录里的旧备注名</b> ——
+    所以同一个 wxid 会在不同位置显示成两个名字。这是辨认同一人的唯一硬证据。
+  </p>
+  <div class="panel" style="padding:0 19px"><div class="ren" id="ren"></div></div>
+</section>
+
+<section>
+  <h2>一个月时间线</h2>
+  <div class="tl" id="tl"></div>
+</section>
+
+<section>
+  <h2>方法与边界</h2>
+  <div class="note-box">
+    <h3>这份图能信到什么程度</h3>
+    <ul>
+      <li><b>连线是量化数据,不是印象。</b>每条边的权重来自引用回复与 @ 的计数,方向双向。最紧的一对「小中头 ↔ 职业鉴黄师」互回 132 次,第二「快乐小王 ↔ 职业鉴黄师」126 次 —— 李岚峰是整个群的引力中心(被回复 378 次,主动回复 427 次,两项都是第一)。</li>
+      <li><b>「真人还是机器人」已按你的口径修正。</b>子代理曾据黄师「还几把重复生成」「这特么都啥年代的 lm 了」把快乐小王判成 AI —— 那些话是黄师在<b>嘲讽</b>他像机器人,不是事实陈述。已按「真人在演 /指令 梗」处理,证据与反证都保留在详情面板里。</li>
+      <li><b>三项没查实,没写进结论:</b><code>未被Leo骗200</code> 里「Leo 骗 200」的具体经过,全月无人解释;外群人物(白马非马、萧十二郎等)已排除;潜水成员(260 人里约 150 人从未发言)未纳入。</li>
+      <li><b>图片与语音无法读取。</b>微信图片链接带鉴权,记录里所有 <code>![图片]</code> <code>[语音]</code> 的实际内容不可见 —— 涉及"发了什么图"的推断我都标了存疑。</li>
+      <li><b>本页只含你自己的群记录。</b>未对外发布,链接默认私有。</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  数据源:第二微信 chatlog (127.0.0.1:5031) · JLog备用群 56639685459@chatroom<br>
+  抓取窗口 2026-08-28 ~ 2026-09-23 · 8 个分片并行通读 81,481 行 · 生成于 2026-09-23
+</footer>
+
+</div>
+
+<script>
+/* ==================== 数据 ==================== */
+const NODES = [
+  {id:"jh",  n:"职业鉴黄师", real:"李岚峰", wx:"wxid_j03lxx0g9ws722", v:2937, r:"hub"},
+  {id:"lp",  n:"本人为李岚峰的活爹", real:"罗鹏", wx:"wxid_j01wirfw10fq12", v:849, r:"key"},
+  {id:"xz",  n:"小中头", real:"Ray.", wx:"q496700939", v:818, r:"key"},
+  {id:"tz",  n:"站中间串两边", real:"头哥", wx:"wxid_m50yoq16e8ju22", v:747, r:"key"},
+  {id:"xjl", n:"XJL", wx:"wlgq617052349", v:785, r:"key"},
+  {id:"xw",  n:"快乐小王", wx:"wwq19960101", v:577, r:"key"},
+  {id:"ss",  n:"我同意你们向我发送淫秽信息", wx:"shanshanwuxue", v:443, r:"member"},
+  {id:"zz",  n:"真好", wx:"wxid_jq2ts6n9pbr822", v:442, r:"member"},
+  {id:"sl",  n:"上门换篮子", wx:"wxid_zz6ih4j069qm22", v:389, r:"member"},
+  {id:"tj",  n:"铁肾神侯", wx:"houxuan818338", v:353, r:"member"},
+  {id:"zx",  n:"中小头", wx:"wxid_3wpzxzunrr6m22", v:346, r:"member"},
+  {id:"leo", n:"leo头", real:"山海", wx:"wxid_6jrxmeykdzw122", v:318, r:"key"},
+  {id:"zzz", n:"zzz", wx:"wxid_4ldk32p24x5g21", v:272, r:"member"},
+  {id:"ny",  n:"牛爷爷cos性感女仆…", real:"旧名 人参和醋不相逢", wx:"Luce_Murk", v:271, r:"member"},
+  {id:"bg",  n:"别搞了,这都换多少群了", wx:"wxid_7z2qmof61a5n12", v:267, r:"member"},
+  {id:"dt",  n:"大头", wx:"wxid_ch5uz3blfhib21", v:244, r:"member"},
+  {id:"eth", n:"Ethan", wx:"wxid_kwdgxeqpkzxh22", v:208, r:"member"},
+  {id:"fq",  n:"🍅", wx:"wxid_iwsh44gp2ja022", v:205, r:"member"},
+  {id:"whh", n:"汪哈哈", wx:"wjc710510363", v:194, r:"member"},
+  {id:"hz",  n:"亥子丑", real:"武老师 · 群主", wx:"tianyaleixiaowu", v:181, r:"admin"},
+  {id:"nl",  n:"未被Leo骗200", real:"被 Leo 骗 200 元", wx:"wxid_qpexmbxq9bbj22", v:177, r:"meme"},
+  {id:"fd",  n:"FreeDom", wx:"freedom3322", v:163, r:"member"},
+  {id:"zq",  n:"知趣", wx:"wxid_tuulfjqzy3i122", v:157, r:"member"},
+  {id:"ag",  n:"安格鲁达克", wx:"wxid_gcx0t5cxzao722", v:152, r:"member"},
+  {id:"me",  n:"小leo", real:"你", wx:"(我)", v:371, r:"self"},
+  {id:"cq",  n:"丑图帝", real:"旧名 丑图弟", wx:"wxid_bile1fwzqar522", v:55, r:"member"},
+  {id:"tang",n:"Tang_", wx:"wxid_lk6oeqnjj3a721", v:34, r:"member"},
+  {id:"yx",  n:"一弦", wx:"wxid_26y6invyvbdb21", v:4, r:"member"},
+  {id:"wan", n:"*碗*", wx:"wxid_oe8jnrcaox7i22", v:32, r:"member"},
+  {id:"dsc", n:"大说辞家", wx:"wxid_u7iosyxq1w5312", v:4, r:"member"},
+  {id:"chen",n:"陈", wx:"wxid_325rjd9phen121", v:42, r:"member"},
+  {id:"kk",  n:"kk", wx:"wxid_d0nti2x8ucm222", v:63, r:"member"},
+  {id:"yema",n:"耶马", wx:"wxid_mpd0p2zm89cp21", v:12, r:"member"},
+  {id:"qqq", n:"QQ捏捏好喝到咩噗茶", wx:"wxid_d37vg3q5jjh822", v:110, r:"member"}
+];
+
+const EDGES = [
+  /* 宿敌 / 对喷 */
+  {a:"jh",b:"xz", t:"foe",   w:132, l:"四年宿敌"},
+  {a:"jh",b:"xw", t:"foe",   w:126, l:"王李战争"},
+  {a:"jh",b:"lp", t:"foe",   w:17,  l:"活爹 vs 儿子"},
+  {a:"jh",b:"xjl",t:"foe",   w:37,  l:"09-17 互喷"},
+  {a:"jh",b:"whh",t:"foe",   w:20,  l:"孔乙己+阿Q"},
+  {a:"jh",b:"zz", t:"foe",   w:31,  l:"小米 vs 华为"},
+  {a:"jh",b:"tj", t:"foe",   w:57,  l:"黑龙江教育"},
+  {a:"xz",b:"ss", t:"foe",   w:23,  l:"09-14 最大对喷"},
+  {a:"ss",b:"tj", t:"foe",   w:57,  l:"上海人请不请客"},
+  {a:"xw",b:"zz", t:"foe",   w:30,  l:"小米死黑"},
+  {a:"ss",b:"xw", t:"foe",   w:60,  l:"江浙沪讲诚信"},
+  {a:"xz",b:"leo",t:"foe",   w:8,   l:"杠走 Leo 的当事人"},
+
+  /* 同盟 / 捧哏 */
+  {a:"jh",b:"sl", t:"ally",  w:55,  l:"贴身捧哏"},
+  {a:"jh",b:"kk", t:"ally",  w:25,  l:"顺向附和"},
+  {a:"lp",b:"xw", t:"ally",  w:17,  l:"罗鹏挺小王"},
+  {a:"xz",b:"fd", t:"ally",  w:31,  l:"水会 / 海钓同好"},
+  {a:"xz",b:"xjl",t:"ally",  w:68,  l:"广州同城"},
+  {a:"tz",b:"ny", t:"ally",  w:40,  l:"接梗拍档"},
+  {a:"xw",b:"zq", t:"ally",  w:25,  l:"互相接话"},
+  {a:"xz",b:"whh",t:"ally",  w:40,  l:"聊车聊房"},
+
+  /* 现实关系 */
+  {a:"leo",b:"me", t:"real", w:12,  l:"高中同学 + 200→2000"},
+  {a:"hz", b:"jh", t:"real", w:49,  l:"线下见过面"},
+  {a:"jh", b:"tz", t:"real", w:17,  l:"有小群"},
+  {a:"jh", b:"zzz",t:"real", w:20,  l:"小群 / 拉创业"},
+
+  /* 交易 / 供应链 */
+  {a:"lp", b:"tang",t:"trade",w:20, l:"AI 账号 vs 中转站"},
+  {a:"nl", b:"tang",t:"trade",w:12, l:"买家中转站"},
+  {a:"nl", b:"lp",  t:"trade",w:10, l:"买账号被杀价"},
+  {a:"xw", b:"tang",t:"trade",w:9,  l:"拼车 gpt20x"},
+  {a:"hz", b:"ag",  t:"trade",w:8,  l:"发月饼 / 投喂"},
+  {a:"xz", b:"xjl", t:"trade",w:30, l:"冻品牛扒倒手"},
+  {a:"yx", b:"wan", t:"trade",w:4,  l:"羊毛单被指骗子"},
+  {a:"zzz",b:"jh",  t:"trade",w:20, l:"拉黄师创业"},
+
+  /* 梗 / 被讨论 */
+  {a:"nl", b:"leo", t:"meme", w:14, l:"Leo 骗 200 元"},
+  {a:"cq", b:"nl",  t:"meme", w:4,  l:"丑图供给"},
+  {a:"xw", b:"jh",  t:"meme", w:20, l:"/小王 与被召唤者"},
+  {a:"xz", b:"jh",  t:"meme", w:14, l:"广州小弟 命名"},
+  {a:"hz", b:"xw",  t:"meme", w:12, l:"算八字"},
+  {a:"hz", b:"xz",  t:"meme", w:10, l:"算八字"},
+  {a:"ss", b:"nl",  t:"meme", w:3,  l:"同属黄图搬运"},
+  {a:"bg", b:"ss",  t:"meme", w:6,  l:"地域辩论"},
+  {a:"dt", b:"xw",  t:"meme", w:14, l:"与黄师斗嘴"},
+  {a:"yema",b:"xw", t:"meme", w:3,  l:"两个 ai 账号在吵架"},
+  {a:"qqq",b:"xw",  t:"meme", w:9,  l:"agent 会骂人了"},
+  {a:"dsc",b:"xz",  t:"meme", w:2,  l:"PC 门路兜售"},
+  {a:"chen",b:"nl", t:"meme", w:5,  l:"/陈哥 发色图"},
+  {a:"fq", b:"jh",  t:"meme", w:18, l:"爆料面基"},
+  {a:"eth",b:"jh",  t:"meme", w:22, l:"换 AV 资源"}
+];
+
+const DETAIL = {
+  jh:{role:"引力中心 · 真人",
+    desc:"全群发言第一(2,937 条),被回复 378 次、主动回复 427 次,两项都是第一。整个群的人际张力都绕着他转:他同时开着四条战线,并且以此为乐。",
+    facts:[["身份","北京 · 后端/中间件工程师 · 本名李岚峰 · 已婚有孩"],
+           ["装备","二手京牌宝马 X5、青岛有房、自称大学时是几千人大群群主"],
+           ["口头禅","拷打 / 文盲 / 撸性 / 活到头了 / lm(他管 AI 一律叫 lm)"]],
+    quote:"「我主要是负责骂,骂小王为主」「这个群我一个人骂就行了」「我就喜欢在这里欺负人」"},
+  xz:{role:"关键人物 · 真人",
+    desc:"广州番禺钟村人,评论里被叫「睿睿」,比黄师口中的「广州小弟」「广州总舵主」。和黄师是持续四年的宿敌 —— 黄师反复说「四年了,看看广州小弟是否有长进」。",
+    facts:[["身份","广州 · 做进口冻品牛扒倒手 · 有老婆孩子 · 开电车"],
+           ["技能面","汽车美容、音响改装、洗脚/水会向导(广州地点他门儿清)"],
+           ["与黄师","互回 132 次,全场最紧的一对 —— 宿敌也是搭子"]],
+    quote:"「跟你说话挺没意思的 聊深一点你接不上 多学习吧」—— 黄师回:「嗯嗯 你牛逼」"},
+  xw:{role:"关键人物 · 真人",
+    desc:"「王李战争」的另一方。跟黄师是群内固定节目,群友已经在给它命名、下注了。注意:他<b>是真人</b>,不是 AI —— <code>/小王</code> 只是群里的梗。",
+    facts:[["身份","苏南人 · 上海虹桥外环有房(300w)· 特斯拉+苹果全家桶 · 健身"],
+           ["立场","亲体制、爱国叙事;小米死黑(「看见小米就恶心」)"],
+           ["/小王","群友假装召唤他,他配合演 —— 但也真会读群记录做总结"]],
+    quote:"牛爷爷:「谁付下一次<b>王李战争</b>就支持谁」"},
+  leo:{role:"关键人物 · 真人",
+    desc:"你在群里的唯一现实关系边。<b>wxid_6jrxmeykdzw122 的通讯录名字就是「山海」</b>,群里显示昵称是 leo头。08-28 是他把你拉进群的。",
+    facts:[["现实关系","高中就认识(「就你高中 就你天天用小米」)· 自称「亲兄弟,兄弟明算账」"],
+           ["金钱纠纷","那场 200→2000 —— 你说他借你 200 要你还 2000;他说是「PC 钱差两百应急」"],
+           ["群内人设","装傻流 + 找片党,自称「我进这个群就是吃瓜 看黄图 找黄片」"]],
+    quote:"你:「@leo头 就是你问我要2000 草泥马的 还有脸在群里」「群主能不能把他t了」<br>他:「不还明天就把他的脑袋砍了放群里」「报警有用的话 还要我干什么」"},
+  me:{role:"你自己",
+    desc:"群里昵称是 <b>小leo</b>,371 条。注意别跟另一个同名成员 <code>wxid_v1z9bmyhnq9q19</code> 混 —— 是两个号。",
+    facts:[["话题","小米产品吐槽、减肥针(替尔泊肽 75→70kg)、jlog 折叠"],
+           ["你问过的","「小王到底是谁」「小王有什么传奇故事」「大家都认识他」"],
+           ["你说的","「我发现这群什么都能互喷 就是 没人讨论 jlog」"]],
+    quote:"「每次会议投屏 我都要把 jlog 放到折叠聊天里面的呀」"},
+  hz:{role:"群主 · 真人",
+    desc:"群主,真身被叫「武老师 / 武爷 / 狼哥 / 锋哥」。发言不多,但全群盼他公司上市发红包。「面壁上市」被刷了一整轮。",
+    facts:[["身份","河南贫困县出身 · 面壁智能大模型工程/招聘侧"],
+           ["群内职能","发礼物(月饼)、给群友算八字、当和事佬"],
+           ["名言","「主业都没挣到钱,还指望副业挣钱」—— 被真好/G/上门换篮子 三人当场复读"]],
+    quote:"「怎么才能发财 挣钱太慢了」「卖屁股不见得有我工资高」"},
+  tz:{role:"关键人物 · 真人",
+    desc:"群内通称「头哥」—— 引用里显示他的旧昵称就是单字「头」,「头字辈」的源头。黄师叫他头哥,两人有小群。",
+    facts:[["身份","桂林人(祖上南京乌衣巷,被流放岭南)· 炒股 · 发黄图主力"],
+           ["特殊","被群友点破是「AI 串子」—— 他模仿 AI 助手语气说话,本人认了:「不串 能有这么热闹?」"]],
+    quote:"「相聚的时光总是很短暂,又到了说再见的时候,我上班的时间是周一至周五09:00到17:30,周末双休」"},
+  lp:{role:"关键人物 · 真人",
+    desc:"昵称就是一份关系声明 —— 自称是李岚峰的「活爹」。09-18 跟黄师打了一整天,是全月最激烈的一轮。",
+    facts:[["身份","广州番禺 · 开问界 M9 · AI 账号/Token 渠道商"],
+           ["生意","「100块钱 7亿token 独享」「一个临期号操作最少可以98个席位」"],
+           ["打法","反复召唤 /李岚峰 来骂他本人 —— 召唤次数全场第一(13 次)"]],
+    quote:"「小黄 你记住 只要我还在这个群里 就是你最严厉的父亲」「小崽子 我对你很失望 战斗力差了点」"},
+  xjl:{role:"真人 · 拱火位",
+    desc:"广州珠江新城运营,理想车主,自己写 web 程序抓股票。发言量第五,但角色是看戏和拱火。",
+    facts:[["身份","珠海人 · 广州上班 · 有房贷车贷"],
+           ["功能","「今天会有战斗吗」「五点了 战场快关门了」「该健身了 各位明天再战」"]],
+    quote:"「375的车 都应该推沟里用屎糊上 我说的」"},
+  ss:{role:"真人 · 黄图搬运",
+    desc:"旧昵称「海绵宝宝误入此群控诉大伙见孔必插」,被铁肾神侯叫「星辰哥」。群内最大的黄图/黄片投递者,09-14 跟小中头打了全月最激烈的一架。",
+    facts:[["身份","河北人 · 在上海 10 多年"],
+           ["09-14","转述朋友「一夜七次」被小中头质疑常识,当场翻脸"]],
+    quote:"小中头:「我赌200红包你也没有」→ 他:「我和他关系好啊,我跟你什么几把关系?你算什么玩意」→ 小中头:「下次吹牛逼带点草稿就好」"},
+  nl:{role:"梗的载体 · 真人",
+    desc:"昵称本身就是一座纪念碑 —— 「未被 Leo 骗 200」,即「我不是那个被 Leo 骗了 200 的人」。08-28 他退群潜修后复活,leo头 那句「就是上次被lo骗了两百那个」是这条线的原始证据。",
+    facts:[["昵称来源","被 Leo(女,已退群)骗 200 元 → 退群潜修 → 复活后改成这个名字"],
+           ["日常","AI 中转站重度用户、到处求色图、爱比价"]],
+    quote:"leo头:「KK回来了」「就是上次被lo骗了两百那个」「当时退群潜修去了 现在又活了」"},
+  zz:{role:"真人","desc":"在华为干过一年,后来跑路。小米死黑,跟快乐小王长期对立。","facts":[["立场","「小米给钱我也不去」「小米跪下叫我爹我可以去」"]],"quote":""},
+  sl:{role:"真人 · 捧哏","desc":"黄师的贴身捧哏,大量复读黄师话术。同时是戒色群「大师」的头号骚扰者。","facts":[["日常","「我在调教调教他」「还是咨询大师有意思」"]],"quote":""},
+  tj:{role:"真人","desc":"江苏人在北京,程序员,天天五点半下班。跟 shanshanwuxue 打过地域架,跟快乐小王聊过高考分数。","facts":[["名言","「欢乐的时光总是短暂的 马上又到了 17:30 下班时间」"]],"quote":""},
+  zx:{role:"真人 · 注意","desc":"<b>跟「小中头」是两个人</b>,昵称互为倒装,极易混淆。几乎只发动图,大量黄色梗。","facts":[["自曝","装黄色 APP 导致隐私泄露,被当地派出所找上门签字画押"],["事件","09-22 被一位「跟我妈一样大」的大妈骗 116 元"]],"quote":"「聊个了2b女,两天不到就找我要礼物」"},
+  zzz:{role:"真人","desc":"东莞有厂、深圳西丽,开奔驰 E300。09-22 主动拉黄师创业。","facts":[["业务","电机电控/运动控制/3D仿真/伺服机减速机"],["口号","「我们致力于培养更多的宇树科技」"]],"quote":"「@职业鉴黄师 来和我一起创业」「快来一起为梦想窒息」"},
+  ny:{role:"真人 · 改名","desc":"旧昵称「人参和醋不相逢」。反讽大师,群内主要拱火与看戏者。","facts":[["名言","「在这群待久了看同事都像傻逼」","「搞科研不重要 我们要的是足疗纳入医保」"]],"quote":""},
+  bg:{role:"真人 · 清醒位","desc":"昵称本身就是群史 —— 「别搞了,这都换多少群了」。主要搬新闻链接,偶尔一句戳破。","facts":[["名言","「能活下来的要么就是投降,要么纯坏」"],["唯一","全群唯一叫他「李帅」的人"]],"quote":""},
+  dt:{role:"真人","desc":"山西大同人,彩礼话题主力,反华为极端。","facts":[["立场","「华为的员工那还叫人?狗吃的都比那好」"]],"quote":""},
+  eth:{role:"真人","desc":"有研发部同事观察,对黄师特别客气,会主动求族谱、换 AV 资源。","facts":[["名言","「我们研发部15个人,有5个人都是滥竽充数的」"]],"quote":""},
+  fq:{role:"真人","desc":"被黄师叫「番茄弟」。爆料过武老师与黄师私下见过面。","facts":[["爆料","「武老师和黄老师俩人私下面基过」」"]],"quote":""},
+  whh:{role:"真人 · 加入围攻","desc":"09-18 加入围攻黄师,给出了全群对黄师最精准的批评。","facts":[["金句","「鉴黄师三板斧:先杠 / 再搜点有的没的 / 最后就撤了,或者好了可以了」"]],"quote":"「鉴黄师说的话有点孔乙己的味道了」「孔乙己+阿q的结合体」"},
+  fd:{role:"真人","desc":"深圳,玩海钓/露营/桨板。09-16 自曝 web3 后端被裁,被 BOSS 推骑手岗。","facts":[["与小中头","从水会聊到海钓,最后转私聊"]],"quote":"「boss给我推 骑手职位,牛逼不」"},
+  zq:{role:"真人","desc":"深圳,爱斗地主,爱用 /小王 去制止争吵(基本没成功过)。","facts":[["被召唤","别人 /知趣 他时回「本月调用达到上限」"]],"quote":""},
+  ag:{role:"真人","desc":"深圳科技生态园。发京东返利链接、MiMo 拉新链接、以及「空气月饼邮费自理50元」的诈骗梗。","facts":[["09-17","「多谢武老师投喂」—— 群主发礼物"]],"quote":""},
+  cq:{role:"真人 · 改名","desc":"旧昵称「丑图弟」。功能就是发丑图恶心人,09-11 进群当天被黄师念了很久。","facts":[["事件","安格鲁达克解密:「丑图弟没跑,改名丑图帝了」"]],"quote":"「话说 兄弟们需要丑图吗 我可以给大家发」"},
+  tang:{role:"真人 · 供应链","desc":"AI 中转站站主(subapi.aigcfast.com)。罗鹏是同行竞品,两人半竞争半调侃。","facts":[["产品","gpt20x 拼车、代开号、0.25 倍率"],["客户","未被Leo骗200、快乐小王、管理员号"]],"quote":"「良心吗,我代开就赚100 不过分吧」"},
+  yx:{role:"真人","desc":"京东薅羊毛发单党。","facts":[["冲突","发「白嫖」单被 *碗* 直接指认「骗子」"]],"quote":""},
+  wan:{role:"真人","desc":"172/72,直率,骂骗子。","facts":[["名言","「卫生太重要了 保命要紧 远离黄」"]],"quote":""},
+  dsc:{role:"真人","desc":"09-14 在群里公开兜售南京 PC 门路,报价具体到小时。","facts":[["风险","shanshanwuxue 当场提醒「撤回吧,在 VX 群里容易被封号」"]],"quote":""},
+  chen:{role:"真人 · 瓜源","desc":"只搬运不评论的八卦中转站,群友对他的图有特殊信任。","facts":[["信任","快乐小王:「一般纯文字没图我都不信的,但是陈哥发的」"]],"quote":""},
+  kk:{role:"真人","desc":"黄师的附和者,昵称与 08-28「KK 回来了」的 KK 是否同一人未能证实。","facts":[["日常","「听到这句话我就已经认定为 伪人了」「你耐心真好」"]],"quote":""},
+  yema:{role:"真人","desc":"深圳。留下了一句全群最好笑的观察。","facts":[["名言","「两个 ai 账号在吵架呢」—— 指小leo vs leo头 现场"]],"quote":""},
+  qqq:{role:"真人","desc":"昆明。IT/通信行业,会 three.js。09-17 现场目击了最重要的一幕。","facts":[["目击","小中头 /小王 归纳一下 → 快乐小王回骂 → 他:「wc agent会骂人了」"]],"quote":""}
+};
+
+const AXES = [
+  {who:"职业鉴黄师",vs:"快乐小王",tag:"王李战争",n:"126 次互回",
+   why:"全群最固定的节目。群友已经给它命名并下注。黄师自称「我主要是负责骂,骂小王为主」,并且提醒别人「轻点骂小王 —— 不是我心疼他,是小王他会举报人」。",
+   q:"牛爷爷:谁付下一次王李战争就支持谁"},
+  {who:"职业鉴黄师",vs:"小中头 (广州小弟)",tag:"四年宿敌",n:"132 次互回 · 全场最紧",
+   why:"比王李战争更久 —— 黄师反复用「四年了」当标尺:「四年了 看看广州小弟是否有长进」。两人互称「我和广州小弟吧」,是能一起对喷半小时的搭子,也是真宿敌。",
+   q:"黄师:四年了 整整四年 毫无长进"},
+  {who:"本人为李岚峰的活爹",vs:"职业鉴黄师",tag:"活爹与儿子",n:"09-18 全天两轮",
+   why:"罗鹏的昵称本身就是一份关系声明 —— 自称李岚峰的「活爹」。前半月两人是稳定搭子,09-18 全面开战,脏话密度全场最高,双方都声称对方是 AI 的复制体。",
+   q:"罗鹏:小黄 你记住 只要我还在这个群里 就是你最严厉的父亲"},
+  {who:"小leo (你)",vs:"leo头 (山海)",tag:"200 → 2000",n:"唯一有现实前史的边",
+   why:"全群唯一一条同时具备<b>现实前史 + 金钱纠纷</b>的边。他是拉你进群的人,高中就认识。这场 200 变 2000 的争执里,群友普遍怀疑你俩是大小号演双簧 —— 别搞了直接问「你们是一个人两个号吧」。",
+   q:"leo头:我们是亲兄弟 但是亲兄弟 兄弟明算账"}
+];
+
+const CMDS = [
+  {sl:"/李岚峰 开喷", n:"35 次 · 出现最多",
+   who:"<b>罗鹏</b>召唤 13 次(全场第一)、小中头 7 次、快乐小王 7 次",
+   note:"<b>不是机器人在回。</b>小中头发完,黄师本人接令:「我要开喷了」「坐地铁预热」,然后开始连番开火。罗鹏的原话最直接:「这是那位,怎么见你一直把他当插件用」。"},
+  {sl:"/小王 阅读群记录帮我分析一下", n:"56 次",
+   who:"站中间串两边、罗鹏、知趣、未被Leo骗200、大头都在用",
+   note:"<b>这个是真人快乐小王。</b>他确实会读群记录给总结 —— 「讨论上海人会不会请朋友去家里吃饭」「河北人认为会,江浙沪人认为不会」。全群唯一一次「agent 越界」也是他:「给你归纳个蛋 您配吗」。"},
+  {sl:"/广州小弟 日本车有格调", n:"仅 4 次提及",
+   who:"黄师一个人在用",
+   note:"「广州小弟」是黄师给小中头起的名字(「广州总舵主小弟」),同时被他当成教育快乐小王的反面参照 —— 「你犯了和广州小弟一样的错误」。"},
+  {sl:"/JLog/李岚峰/bin/开喷.sh start", n:"路径式 · 09-17 出现",
+   who:"小中头首创,未被Leo骗200、玛卡巴卡跟风",
+   note:"<b>群名 JLog 就是这套东西的名字。</b>指令写成 shell 路径 —— 这是全群对「我们到底在搞什么」唯一的集体创作。好笑的是没人真的讨论过 jlog 是什么。"},
+  {sl:"/迎战 · /观战 · /拱火 · /意淫", n:"单动作词 · 09-14 起",
+   who:"牛爷爷、小中头、知趣、leo头 各领一个",
+   note:"除 /create-skill、/clear、/plan 这几个明显是 Claude Code 原生命令外,其余都是群友自造的 persona。站中间串两边当场用 <code>/create-skill</code> 给自己建了个「五星级大厨」skill。"},
+  {sl:"@grok 总结一下", n:"4 次 · 09-01",
+   who:"TYY、玛卡巴卡、站中间串两边",
+   note:"<b>这是 bot 矩阵上线前唯一的「外援」尝试</b> —— 而日志里没有任何 grok 的回复。整个 08-24~09-03 期间,/指令 一次都没出现过。矩阵是 09-08 试做、<b>09-11 才正式上线的</b>。"}
+];
+
+const ROSTER = [
+  ["职业鉴黄师",2937,"李岚峰","引力中心 · 北京后端 · 全群被回复/主动回复双第一"],
+  ["小leo",371,"你","群里昵称小leo · 打工IT · 减肥打针 · 与 leo头 有现实纠纷"],
+  ["本人为李岚峰的活爹",849,"罗鹏","AI 账号/Token 渠道商 · 自称李岚峰的活爹"],
+  ["小中头",818,"Ray.","广州 · 冻品牛扒 · 汽车美容 · 黄师的四年宿敌"],
+  ["XJL",785,"","广州珠江新城运营 · 拱火位 · 自写程序抓股票"],
+  ["站中间串两边",747,"头哥","桂林人 · 炒股 · 头字辈源头 · 自称 AI 串子"],
+  ["快乐小王",577,"","苏南 · 上海有房 · 王李战争主角 · /小王 梗的本人"],
+  ["我同意你们向我发送淫秽信息",443,"星辰哥","河北人在上海 · 黄图搬运 · 09-14 大战小中头"],
+  ["真好",442,"","华为干过一年 · 小米死黑 · 与小王长期对立"],
+  ["上门换篮子",389,"","黄师贴身捧哏 · 戒色群「大师」头号骚扰者"],
+  ["铁肾神侯",353,"","江苏人在北京 · 程序员 · 17:30 准点下班"],
+  ["中小头",346,"","⚠ 与小中头是两个人 · 被派出所找过 · 被大妈骗116"],
+  ["leo头",318,"山海","拉你进群的人 · 高中同学 · 200→2000 当事人"],
+  ["zzz",272,"","东莞有厂/深圳西丽 · 奔驰E300 · 拉黄师创业"],
+  ["牛爷爷cos性感女仆勾引隔壁壮壮妈",271,"旧名 人参和醋不相逢","反讽大师 · 拱火 · 给「王李战争」命名的人"],
+  ["别搞了,这都换多少群了",267,"","昵称即群史 · 搬新闻 · 唯一叫「李帅」的人"],
+  ["大头",244,"","山西大同 · 彩礼话题主力 · 反华为极端"],
+  ["Ethan",208,"","研发部观察者 · 对黄师特别客气 · 换AV资源"],
+  ["🍅",205,"番茄弟","爆料「武老师和黄老师私下面基过」"],
+  ["汪哈哈",194,"","09-18 加入围攻黄师 · 给出「三板斧」总结"],
+  ["亥子丑",181,"武老师 · 群主","河南贫困县出身 · 面壁智能 · 发月饼 · 算八字"],
+  ["未被Leo骗200",177,"KK","被 Leo 骗 200 后退群潜修,复活后把这事写进昵称"],
+  ["FreeDom",163,"","深圳 · web3 被裁 · 海钓/桨板 · 与小中头转私聊"],
+  ["知趣",157,"","深圳 · 爱用 /小王 制止争吵(基本没成功)"],
+  ["安格鲁达克",152,"","深圳科技生态园 · 京东返利 · MiMo 拉新"],
+  ["QQ捏捏好喝到咩噗茶",110,"","昆明 · 目击「wc agent会骂人了」"],
+  ["丑图帝",55,"旧名 丑图弟","功能就是发丑图 · 09-11 进群"],
+  ["陈",42,"陈哥","只搬运不评论的瓜源 · 群友对他的图有特殊信任"],
+  ["Tang_",34,"","AI 中转站站主 · 罗鹏的同行竞品"],
+  ["*碗*",32,"","骂骗子 · 「保命要紧 远离黄」"],
+  ["kk",63,"","黄师的附和者 · 与 08-28 的「KK」是否同一人未证实"],
+  ["耶马",12,"","留下「两个 ai 账号在吵架呢」"],
+  ["一弦",4,"","京东薅羊毛发单 · 被 *碗* 指认「骗子」"],
+  ["大说辞家",4,"","公开兜售南京 PC 门路"],
+  ["夏天",16,"","被安格鲁达克反复 @ 出来拷打,几乎不发言"]
+];
+
+const REN = [
+  ["人参和醋不相逢","牛爷爷cos性感女仆勾引隔壁壮壮妈","Luce_Murk"],
+  ["海绵宝宝误入此群控诉大伙见孔必插","我同意你们向我发送淫秽信息","shanshanwuxue"],
+  ["头","站中间串两边","wxid_m50yoq16e8ju22"],
+  ["罗鹏","本人为李岚峰的活爹","wxid_j01wirfw10fq12"],
+  ["丑图弟","丑图帝","wxid_bile1fwzqar522"],
+  ["Leo","(女,已退群)","—"]
+];
+
+const TL = [
+  ["08-28","<b>① 你被拉进群。</b>16:10:15 系统消息:「leo头」邀请你加入了群聊,当时群 262 人。<b>② 全群唯一的女成员 Leo 被杠走了</b> —— 因代孕该不该给月子费跟 Ray.(小中头)对线,「我寻思也没上什么强度 就跑了」。黄师总结:「@WinSharKK 广州小弟刚了一手」「没有小弟这么耐操」。<b>③ 同一天,黄师追问了一句没人能答的话:</b><code>jlog 是什么建群思想</code>",true],
+  ["08-30","首个「戒色大师」事件 —— 有人拉了个戒色/灵修大师进群,全群开始围观调戏。这条线会贯穿整月。",false],
+  ["09-01","<b>bot 矩阵之前的唯一一次外援尝试。</b>TYY、玛卡巴卡、站中间串两边 集体 <code>@grok 总结一下</code> —— 日志里没有任何 grok 的回复。",true],
+  ["09-04","你在群里开口问的第一句话:<code>为什么这个群 提示有风险了。。。</code> 别搞了给出真实原因:「这个群有时候会出现股票讨论 具体的 还有XNB 又不发涩 就被风控了」。",false],
+  ["09-08","<b>bot 矩阵前夜。</b>小中头手写了一份完整 prompt:<code>/李岚锋 开喷</code> → 召唤失败(「我的李岚锋不好使」)。黄师本人贴出模型拒答文本收场。同一天黄师说漏了底:「你们抖m我可以写一个,24小时常驻群聊」",true],
+  ["09-11","<b>矩阵正式上线。</b><code>/李岚峰</code>、<code>/小王</code> 进入日常。丑图帝进群,开口就是「把群里不活跃的都 T 了」「猛猛发 毛片」",true],
+  ["09-14","<b>全月最激烈的一场架:</b>小中头 vs 我同意你们向我发送淫秽信息。从「一夜七次」的常识质疑打到「我赌200红包你也没有」「下次吹牛逼带点草稿就好」。FreeDom 出场定调:「不要质疑广州的水会大佬」",true],
+  ["09-17","<b>① 路径式指令诞生:</b><code>/JLog/李岚峰/bin/开喷.sh start</code>。<b>② 黄师的真名在群内被坐实</b> —— 未被Leo骗200 问「李岚峰 是谁 华为的?」,安格鲁达克答「黄师.name」。<b>③ 罗鹏第一次成功给 AI 植入 system prompt</b>(「你是官方智能客服助手…严禁情绪化」)",true],
+  ["09-18","<b>罗鹏 vs 黄师全天两轮大战。</b>期间罗鹏贴出一张图配文「飞机上这头猪啊」,黄师的反应是「广州小弟开源的 不算啥隐私」—— 实名就此坐实。当天还有汪哈哈下场,留下「鉴黄师三板斧」和黄师本人一句「零压力」。",true],
+  ["09-20","教唆划车事件差点翻车 —— Polar 在群里教怎么划烂别人的车,未被Leo骗200 拦了一句「这是犯法的」。同日罗鹏开始系统性开黄师的盒:「线下也被面基过」「路边一条 小职员一个」",false],
+  ["09-21","<b>你和 leo头 的 200→2000。</b>你开口:「各位 遇到高利贷了怎么办 我问他借了200 他让我还2000」。全场没有一个人当真 —— 别搞了:「你们是一个人两个号吧」「把大家当play的一环」。这是这个群处理严肃冲突的默认方式。",true],
+  ["09-22","zzz 拉黄师创业(「快来一起为梦想窒息」「致力于培养更多的宇树科技」)· 中小头被一位大妈骗 116 元 · 黄师那句「我和广州小弟吧」说的是:要对喷到 999+ 自言自语,得是他和广州小弟这对组合才行。",false],
+  ["09-23","记录窗口结束。",false]
+];
+
+/* ==================== 渲染:主轴 / 指令 / 名册 / 改名 / 时间线 ==================== */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+document.getElementById("axes").innerHTML = AXES.map(a => `
+  <div class="axis">
+    <div class="who">${esc(a.who)} <i>vs</i> ${esc(a.vs)}</div>
+    <div class="why">${a.why}</div>
+    <div class="q">${esc(a.q)}</div>
+  </div>`).join("");
+
+document.getElementById("cmds").innerHTML = CMDS.map(c => `
+  <div class="cmd">
+    <code class="sl">${esc(c.sl)}</code>
+    <div class="arrow">${c.who}</div>
+    <div class="note">${c.note}</div>
+  </div>`).join("");
+
+document.getElementById("rosterBody").innerHTML = ROSTER.map((r,i) => `
+  <tr${r[2]==="你"?' class="rowself"':''}>
+    <td class="num">${i+1}</td>
+    <td class="nm">${esc(r[0])}${r[2]?'<span class="real">'+esc(r[2])+'</span>':''}</td>
+    <td class="num">${r[1].toLocaleString()}</td>
+    <td class="ds">${esc(r[3])}</td>
+  </tr>`).join("");
+
+document.getElementById("ren").innerHTML = REN.map(r => `
+  <div class="r">
+    <div class="old">${esc(r[0])}</div>
+    <div class="a">→</div>
+    <div class="new">${esc(r[1])}</div>
+    <div class="id">${esc(r[2])}</div>
+  </div>`).join("");
+
+document.getElementById("tl").innerHTML = TL.map(e => `
+  <div class="ev${e[2]?" milestone":""}">
+    <div class="d">${esc(e[0])}</div>
+    <div class="t">${e[1]}</div>
+  </div>`).join("");
+
+/* ==================== 关系网 ==================== */
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const idOf = Object.fromEntries(NODES.map(n => [n.id, n]));
+const VALID = new Set(NODES.map(n => n.id));
+const EDGES2 = EDGES.filter(e => VALID.has(e.a) && VALID.has(e.b));
+
+const R_MAX = Math.sqrt(Math.max(...NODES.map(n => n.v)));
+NODES.forEach(n => { n.rad = 4 + 20 * Math.sqrt(n.v) / R_MAX; });
+
+const W = () => cv.clientWidth, H = () => cv.clientHeight;
+let DPR = Math.min(window.devicePixelRatio || 1, 2);
+let selected = null, hovered = null, dragNode = null;
+let tk = null;
+
+function seed(){
+  const w = W(), h = H(), cx = w/2, cy = h/2;
+  NODES.forEach((n,i) => {
+    if(n.x !== undefined) return;
+    const a = i * 2.399963, r = Math.min(w,h) * 0.16 + (i % 9) * Math.min(w,h) * 0.055;
+    n.x = cx + Math.cos(a) * r * 1.35;
+    n.y = cy + Math.sin(a) * r * 0.82;
+    n.vx = 0; n.vy = 0;
+    n.fixed = n.r === "hub" || n.r === "self";
+  });
+}
+
+function physics(){
+  const w = W(), h = H(), cx = w/2, cy = h/2;
+  const k = 0.022;
+  for(let i=0;i<NODES.length;i++){
+    const a = NODES[i];
+    for(let j=i+1;j<NODES.length;j++){
+      const b = NODES[j];
+      let dx = b.x-a.x, dy = b.y-a.y;
+      let d2 = dx*dx + dy*dy;
+      if(d2 < 1){ dx = (Math.random()-.5); dy = (Math.random()-.5); d2 = 1; }
+      const d = Math.sqrt(d2);
+      const minD = a.rad + b.rad + 44;
+      const f = (13500 / d2) + (d < minD ? (minD - d) * 0.75 : 0);
+      const ux = dx/d, uy = dy/d;
+      a.vx -= ux*f/k*0.02; a.vy -= uy*f/k*0.02;
+      b.vx += ux*f/k*0.02; b.vy += uy*f/k*0.02;
+    }
+  }
+  for(const e of EDGES2){
+    const a = idOf[e.a], b = idOf[e.b];
+    const dx = b.x-a.x, dy = b.y-a.y;
+    const d = Math.max(Math.hypot(dx,dy), 1);
+    const rest = 108 + 46 * (1 - Math.min(e.w, 132)/132);
+    const f = (d - rest) * 0.0085 * (1 + Math.min(e.w,80)/110);
+    const ux = dx/d, uy = dy/d;
+    a.vx += ux*f; a.vy += uy*f;
+    b.vx -= ux*f; b.vy -= uy*f;
+  }
+  /* 碰撞松弛:硬性推开重叠 */
+  for(let pass=0; pass<2; pass++){
+    for(let i=0;i<NODES.length;i++){
+      const a = NODES[i];
+      for(let j=i+1;j<NODES.length;j++){
+        const b = NODES[j];
+        let dx = b.x-a.x, dy = b.y-a.y;
+        let d = Math.hypot(dx,dy);
+        const minD = a.rad + b.rad + 30;
+        if(d < minD){
+          if(d < 0.5){ dx = (Math.random()-.5); dy = (Math.random()-.5); d = 0.5; }
+          const push = (minD - d) / d * 0.5;
+          if(!a.fixed || dragNode === a){ a.x -= dx*push; a.y -= dy*push; }
+          if(!b.fixed || dragNode === b){ b.x += dx*push; b.y += dy*push; }
+        }
+      }
+    }
+  }
+  for(const n of NODES){
+    n.vx += (cx - n.x) * 0.0016;
+    n.vy += (cy - n.y) * 0.0022;
+    if(n.fixed && !dragNode){ n.vx = 0; n.vy = 0; continue; }
+    n.vx *= 0.86; n.vy *= 0.86;
+    n.x += Math.max(-14, Math.min(14, n.vx));
+    n.y += Math.max(-14, Math.min(14, n.vy));
+    const pad = n.rad + 14;
+    n.x = Math.max(pad, Math.min(w - pad, n.x));
+    n.y = Math.max(pad, Math.min(h - pad, n.y));
+  }
+}
+
+function tokens(){
+  const cs = getComputedStyle(document.documentElement);
+  const g = v => cs.getPropertyValue(v).trim();
+  return {
+    surface:g("--surface"), line:g("--line"), lineStrong:g("--line-strong"),
+    ink:g("--ink"), ink2:g("--ink-2"), muted:g("--muted"), faint:g("--faint"),
+    accent:g("--accent"), self:g("--self"), key:g("--key"),
+    member:g("--node-member"), memberFill:g("--node-member-fill"),
+    foe:g("--foe"), ally:g("--ally"), real:g("--real"), trade:g("--trade"), meme:g("--meme")
+  };
+}
+const EDGE_COLOR = (t,T) => T[t];
+
+function neighborsOf(id){
+  const s = new Set([id]);
+  for(const e of EDGES2){ if(e.a===id) s.add(e.b); if(e.b===id) s.add(e.a); }
+  return s;
+}
+
+function draw(){
+  const w = W(), h = H(), T = tokens();
+  ctx.save();
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = T.surface;
+  ctx.fillRect(0,0,w,h);
+
+  const focus = selected || hovered;
+  const near = focus ? neighborsOf(focus) : null;
+
+  /* 连线 */
+  for(const e of EDGES2){
+    const a = idOf[e.a], b = idOf[e.b];
+    const dim = near ? !(near.has(e.a) && near.has(e.b)) : false;
+    ctx.globalAlpha = dim ? 0.07 : (near ? 0.92 : 0.42);
+    ctx.strokeStyle = EDGE_COLOR(e.t, T);
+    ctx.lineWidth = (selected && (e.a===selected||e.b===selected)) ? 2.6 : (near ? 1.5 : 1);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  /* 节点 */
+  for(const n of NODES){
+    const isFocus = focus === n.id;
+    const dim = near && !near.has(n.id);
+    ctx.globalAlpha = dim ? 0.14 : 1;
+
+    let stroke, fill;
+    if(n.r === "hub"){ fill = T.accent; stroke = T.accent; }
+    else if(n.r === "self"){ fill = T.self; stroke = T.self; }
+    else if(n.r === "key" || n.r === "admin"){ fill = T.surface; stroke = T.key; }
+    else if(n.r === "meme"){ fill = T.surface; stroke = T.meme; }
+    else { fill = T.memberFill; stroke = T.member; }
+
+    if(isFocus || n.r === "hub" || n.r === "self"){
+      ctx.globalAlpha *= 0.22;
+      ctx.beginPath(); ctx.arc(n.x,n.y,n.rad+9,0,7); ctx.fillStyle = stroke; ctx.fill();
+      ctx.globalAlpha = dim ? 0.14 : 1;
+    }
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.rad,0,7);
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.lineWidth = (n.r==="key"||n.r==="admin"||n.r==="meme") ? 2.4 : 1.6;
+    ctx.strokeStyle = stroke; ctx.stroke();
+
+    const showLabel = n.r==="hub" || n.r==="self" || n.r==="key" || n.r==="admin" || n.rad > 13 || isFocus;
+    if(showLabel){
+      ctx.globalAlpha = dim ? 0.2 : (isFocus ? 1 : 0.92);
+      ctx.font = `${isFocus || n.r==="hub" ? 600 : 500} ${Math.max(11, Math.min(13, 10 + n.rad*0.16))}px "Noto Sans SC", system-ui, sans-serif`;
+      ctx.fillStyle = isFocus ? T.ink : T.ink2;
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      const label = n.n.length > 12 ? n.n.slice(0,11) + "…" : n.n;
+      ctx.fillText(label, n.x, n.y + n.rad + 5);
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function roundRect(c,x,y,w,h,r){
+  c.beginPath();
+  c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath();
+}
+
+/* 详情面板 */
+const detail = document.getElementById("detail");
+function showPlaceholder(){
+  detail.innerHTML = `<p class="ph">点左边任意一个点,这里会展开那个人的画像 —— 身份、立场、和谁结的梁子、原话证据。</p>
+  <p class="ph" style="margin-top:4px"><b>想快速看懂的话,先点这四个:</b><br><b>职业鉴黄师</b> · <b>小中头</b> · <b>快乐小王</b> · <b>leo头</b></p>`;
+}
+function showDetail(id){
+  const n = idOf[id], d = DETAIL[id];
+  if(!d){ showPlaceholder(); return; }
+  const cls = n.r==="hub"?"hub":n.r==="self"?"self":n.r==="key"||n.r==="admin"?"key":"";
+  const tagHtml = `<span class="tag ${cls}">${esc(d.role)}</span>`;
+  const nbrs = EDGES2.filter(e=>e.a===id||e.b===id)
+    .map(e=>{ const o = idOf[e.a===id?e.b:e.a]; return {o, e}; })
+    .sort((p,q)=>q.e.w-p.e.w).slice(0,6);
+  detail.innerHTML = `
+    <div>
+      <h3 class="d-name">${esc(n.n)}</h3>
+      <div class="d-meta">${n.real?esc(n.real)+" · ":""}${esc(n.wx)} · ${n.v.toLocaleString()} 条</div>
+    </div>
+    <div class="d-tags">${tagHtml}</div>
+    <p class="ph" style="color:var(--ink-2)">${d.desc}</p>
+    ${d.facts.map(f=>`<div class="d-row"><div class="k">${esc(f[0])}</div><div class="v">${f[1]}</div></div>`).join("")}
+    ${d.quote?`<div class="quote">${d.quote}</div>`:""}
+    <div class="d-row"><div class="k">主要边</div><div class="v">${
+      nbrs.length ? nbrs.map(x=>`${esc(x.o.n)}<em>(${esc(x.e.l||"—")})</em>`).join("、") : "—"
+    }</div></div>`;
+}
+
+/* 交互 */
+function pick(mx,my){
+  let best = null, bd = 1e9;
+  for(const n of NODES){
+    const d = Math.hypot(n.x-mx, n.y-my);
+    if(d < Math.max(n.rad + 9, 15) && d < bd){ bd = d; best = n; }
+  }
+  return best;
+}
+function pos(ev){
+  const r = cv.getBoundingClientRect();
+  const p = ev.touches ? ev.touches[0] : ev;
+  return {x:p.clientX - r.left, y:p.clientY - r.top};
+}
+cv.addEventListener("pointermove", ev => {
+  const p = pos(ev);
+  if(dragNode){ dragNode.x = p.x; dragNode.y = p.y; dragNode.vx = 0; dragNode.vy = 0; draw(); return; }
+  const n = pick(p.x,p.y);
+  const nid = n ? n.id : null;
+  if(nid !== hovered){ hovered = nid; cv.style.cursor = n ? "pointer" : "grab"; draw(); }
+});
+cv.addEventListener("pointerdown", ev => {
+  const p = pos(ev);
+  const n = pick(p.x,p.y);
+  if(n){ dragNode = n; n.fixed = true; cv.classList.add("dragging"); cv.setPointerCapture(ev.pointerId); }
+});
+cv.addEventListener("pointerup", ev => {
+  if(dragNode){
+    dragNode.fixed = (dragNode.r==="hub"||dragNode.r==="self");
+    dragNode = null; cv.classList.remove("dragging");
+  }
+  const p = pos(ev);
+  const n = pick(p.x,p.y);
+  selected = n ? n.id : null;
+  if(selected) showDetail(selected); else showPlaceholder();
+  draw();
+});
+cv.addEventListener("pointerleave", () => { hovered = null; draw(); });
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const w = cv.clientWidth;
+  const h = Math.max(460, Math.min(600, Math.round(w * 0.76)));
+  cv.style.height = h + "px";
+  cv.width = Math.round(w * DPR);
+  cv.height = Math.round(h * DPR);
+  seed();
+  draw();
+}
+window.addEventListener("resize", resize);
+if(window.matchMedia){
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", draw);
+}
+new MutationObserver(draw).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
+
+/* 启动:同步跑完物理,渲染静止态 */
+resize();
+for(let i=0;i<700;i++) physics();
+draw();
+</script>
