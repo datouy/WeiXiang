@@ -238,6 +238,21 @@ h2{
   border-radius:12px;
   box-shadow:var(--shadow-sm);
 }
+
+/* ==================== 话题 / 攻击线 ==================== */
+.topics{display:flex;flex-direction:column;gap:10px}
+.topic{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:12px 15px}
+.t-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.t-head b{font-family:var(--sans);font-size:15px;color:var(--ink)}
+.t-heat{font-size:12px;color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:1px 9px;font-weight:600}
+.t-meta{font-size:12px;color:var(--ink-2);margin-left:auto}
+.t-why{margin-top:4px;font-size:13px;line-height:1.55;color:var(--ink)}
+.t-q{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--muted);border-left:3px solid var(--line);padding-left:9px;font-family:var(--sans)}
+.ax-list{display:flex;flex-direction:column;gap:9px}
+.ax-line{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:11px 15px}
+.ax-p{font-family:var(--sans);font-size:14px;color:var(--ink)}
+.ax-n{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+.ax-line .t-q{border-left-color:var(--foe)}
 #graphPanel{
   position:relative;
   overflow:hidden;
@@ -404,6 +419,7 @@ td.num{
 }
 td.nm{font-weight:500;white-space:nowrap}
 td.nm .real{color:var(--accent);font-family:var(--mono);font-size:11.5px;display:block;font-weight:400}
+td.nm .real.nog{color:var(--muted);font-size:10.5px;opacity:.75}
 td.ds{color:var(--muted);font-size:12.5px;min-width:190px}
 .rowself{background:var(--accent-soft)}
 .rowself td.nm{color:var(--self)}
@@ -948,17 +964,20 @@ document.getElementById("axes").innerHTML = AXES.map(a => `
     <div class="q">${esc(a.q)}</div>
   </div>`).join("");
 
-document.getElementById("cmds").innerHTML = CMDS.map(c => `
+const cmdsEl = document.getElementById("cmds");
+if(cmdsEl){
+  cmdsEl.innerHTML = CMDS.map(c => `
   <div class="cmd">
     <code class="sl">${esc(c.sl)}</code>
     <div class="arrow">${c.who}</div>
     <div class="note">${c.note}</div>
   </div>`).join("");
+}
 
 document.getElementById("rosterBody").innerHTML = ROSTER.map((r,i) => `
   <tr${r[2]==="你"?' class="rowself"':''}>
     <td class="num">${i+1}</td>
-    <td class="nm">${esc(r[0])}${r[2]?'<span class="real">'+esc(r[2])+'</span>':''}</td>
+    <td class="nm">${esc(r[0])}${r[2]?'<span class="real">'+esc(r[2])+'</span>':''}${r[4]?'<span class="real nog">未入图</span>':''}</td>
     <td class="num">${r[1].toLocaleString()}</td>
     <td class="ds">${esc(r[3])}</td>
   </tr>`).join("");
@@ -985,7 +1004,7 @@ const VALID = new Set(NODES.map(n => n.id));
 const EDGES2 = EDGES.filter(e => VALID.has(e.a) && VALID.has(e.b));
 
 const R_MAX = Math.sqrt(Math.max(...NODES.map(n => n.v)));
-NODES.forEach(n => { n.rad = 4 + 20 * Math.sqrt(n.v) / R_MAX; });
+NODES.forEach(n => { n.rad = Math.max(11, 5 + 20 * Math.sqrt(n.v) / R_MAX); });
 
 const W = () => cv.clientWidth, H = () => cv.clientHeight;
 let DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -1149,9 +1168,40 @@ function roundRect(c,x,y,w,h,r){
 
 /* 详情面板 */
 const detail = document.getElementById("detail");
+const axesEl = document.getElementById("axes");
+const axesTitleEl = document.getElementById("axesTitle");
+const AXES_HOME = axesEl ? axesEl.innerHTML : "";
+const AXES_TITLE = axesTitleEl ? axesTitleEl.textContent : "互动主线";
+
+function setAxesFor(id){
+  /* 点节点：主线卡片切换成「以他为中心」；取消选中恢复全局 */
+  if(!axesEl) return;
+  if(!id){
+    axesEl.innerHTML = AXES_HOME;
+    if(axesTitleEl) axesTitleEl.textContent = AXES_TITLE;
+    return;
+  }
+  const n = idOf[id], d = DETAIL[id] || {};
+  const links = d.links || [];
+  if(axesTitleEl) axesTitleEl.textContent = `${n.n} 的互动主线`;
+  if(!links.length){
+    axesEl.innerHTML = `<div class="axis"><div class="who">${esc(n.n)} <i>↔</i> 暂无互动</div>
+      <div class="why">这个人没有和其他人形成足够的引用 / @ 来回（单对互动 ≥ 3 次才成线）。</div><div class="q"></div></div>`;
+    return;
+  }
+  axesEl.innerHTML = links.map(l => {
+    const dir = l.out > l.inn * 1.4 ? "他主动找对方" : l.inn > l.out * 1.4 ? "对方主动找他" : "两边有来有回";
+    return `<div class="axis">
+      <div class="who">${esc(n.n)} <i>↔</i> ${esc(l.who)}</div>
+      <div class="why">共 ${l.n} 次 · 他发起 ${l.out} / 对方发起 ${l.inn} —— ${dir}。全部来自引用回复与 @ 的机械统计。</div>
+      ${l.q ? `<div class="q">${esc(l.q)}</div>` : ""}
+    </div>`;
+  }).join("");
+}
 function showPlaceholder(){
   detail.innerHTML = `<p class="ph">点左边任意一个点,这里会展开那个人的画像 —— 身份、立场、和谁结的梁子、原话证据。</p>
-  <p class="ph" style="margin-top:4px"><b>想快速看懂的话,先点这四个:</b><br><b>职业鉴黄师</b> · <b>小中头</b> · <b>快乐小王</b> · <b>leo头</b></p>`;
+  <p class="ph" style="margin-top:4px"><b>想快速看懂的话,先点这四个:</b><br>${window.__TOP4__||""}</p>`;
+  setAxesFor(null);
 }
 function showDetail(id){
   const n = idOf[id], d = DETAIL[id];
@@ -1169,10 +1219,14 @@ function showDetail(id){
     <div class="d-tags">${tagHtml}</div>
     <p class="ph" style="color:var(--ink-2)">${d.desc}</p>
     ${d.facts.map(f=>`<div class="d-row"><div class="k">${esc(f[0])}</div><div class="v">${f[1]}</div></div>`).join("")}
+    ${d.links&&d.links.length?`<div class="d-row"><div class="k">常互动</div><div class="v">${
+      d.links.slice(0,4).map(l=>`${esc(l.who)}<em>(共 ${l.n} 次)</em>`).join("、")
+    }</div></div>`:""}
     ${d.quote?`<div class="quote">${d.quote}</div>`:""}
     <div class="d-row"><div class="k">主要边</div><div class="v">${
       nbrs.length ? nbrs.map(x=>`${esc(x.o.n)}<em>(${esc(x.e.l||"—")})</em>`).join("、") : "—"
     }</div></div>`;
+  setAxesFor(id);
 }
 
 /* 交互 */

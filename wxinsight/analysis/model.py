@@ -17,6 +17,7 @@ class Rec:
     mentions: tuple[str, ...] = ()
     quote_name: str = ""
     quote_text: str = ""
+    quote_wxid: str = ""
     is_self: bool = False
 
     @property

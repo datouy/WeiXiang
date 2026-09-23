@@ -31,6 +31,8 @@ except Exception:  # pragma: no cover
 
 TALKER_ATTR_RE = re.compile(r"@([^\s@\u2005]{1,32})")
 XML_STRIP_RE = re.compile(r"<[^>]+>")
+# 微信 XML 里偶发的非法控制字符（会导致 ElementTree 整体解析失败）
+XML_CTRL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
 
 
 def msg_table(talker: str) -> str:
@@ -51,7 +53,7 @@ def _attr(root: ET.Element, name: str, default: str = "") -> str:
 def _parse_xml(content: str) -> dict:
     """解析 type=49 的 appmsg/系统 XML。"""
     try:
-        root = ET.fromstring(content)
+        root = ET.fromstring(XML_CTRL_RE.sub("", content or ""))
     except ET.ParseError:
         return {}
     out: dict = {}
@@ -74,6 +76,7 @@ def _parse_xml(content: str) -> dict:
         if el.tag.split("}")[-1] == "refermsg":
             refer = {
                 "name": _attr(el, "displayname"),
+                "wxid": _attr(el, "chatusr"),
                 "content": _attr(el, "content"),
                 "type": _attr(el, "type"),
             }
@@ -187,6 +190,7 @@ class Message:
     mentions: list[str] = field(default_factory=list)
     quote_name: str = ""
     quote_text: str = ""
+    quote_wxid: str = ""
     raw: str = ""
 
     @property
@@ -196,7 +200,7 @@ class Message:
 
 def parse_message_content(content: str, local_type: int, is_chatroom: bool) -> dict:
     """把原始 message_content 解析为结构化字段。"""
-    out: dict = {"kind": "other", "text": "", "mentions": [], "quote_name": "", "quote_text": ""}
+    out: dict = {"kind": "other", "text": "", "mentions": [], "quote_name": "", "quote_text": "", "quote_wxid": ""}
 
     if local_type == 1:
         out["kind"] = "text"
@@ -245,8 +249,13 @@ def parse_message_content(content: str, local_type: int, is_chatroom: bool) -> d
         if kind == "quote":
             ref = info.get("refer") or {}
             out["quote_name"] = ref.get("name", "")
-            out["quote_text"] = (ref.get("content") or "").strip()
-            out["text"] = f"[引用 {out['quote_name']}] " + (out["quote_text"][:120])
+            out["quote_wxid"] = ref.get("wxid", "")
+            qtext = (ref.get("content") or "").strip()
+            # 引用的是链接/文件/系统消息时，被引内容本身就是 XML —— 不算有效聊天文本
+            if re.search(r"<\s*(?:msg|appmsg)\b|<\?xml", qtext, re.I):
+                qtext = ""
+            out["quote_text"] = qtext
+            out["text"] = (f"[引用 {out['quote_name']}] " + qtext[:120]) if qtext else f"[引用 {out['quote_name']}]"
         elif kind == "redpacket":
             out["text"] = "[红包]"
         elif kind == "transfer":
@@ -292,7 +301,8 @@ class WxV4:
     def connect(self, path: Path) -> sqlite3.Connection:
         k = str(path)
         if k not in self._con_cache:
-            con = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+            # 只读连接，允许跨线程使用（批量扫描在后台线程跑）
+            con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, check_same_thread=False)
             con.row_factory = sqlite3.Row
             self._con_cache[k] = con
         return self._con_cache[k]
@@ -395,33 +405,57 @@ class WxV4:
             lo = since or 0
             hi = until or 4102444800
             cur = con.execute(sql, (lo, hi))
+            n2id = self._load_name2id(con)
             for row in cur:
-                yield self._row_to_message(row, talker, is_room)
+                yield self._row_to_message(row, talker, is_room, n2id)
 
-    def _row_to_message(self, row, talker: str, is_room: bool) -> Message:
+    @staticmethod
+    def _load_name2id(con: sqlite3.Connection) -> dict[int, str]:
+        """加载当前库的 Name2Id: rowid -> wxid，用于 real_sender_id 归因。"""
+        out: dict[int, str] = {}
+        try:
+            for rowid, uname in con.execute("SELECT rowid, user_name FROM Name2Id"):
+                out[int(rowid)] = uname
+        except sqlite3.Error:
+            pass
+        return out
+
+    def _row_to_message(
+        self, row, talker: str, is_room: bool, n2id: dict[int, str] | None = None
+    ) -> Message:
         content = self._decode_content(row["message_content"], row["compress_content"])
         sender = ""
         if is_room:
             head, sep, rest = content.partition(":\n")
-            if sep:
+            # 前缀必须是单行短头（wxid 或昵称），防止误切正文里带 ":\n" 的消息
+            if sep and 0 < len(head.strip()) <= 64 and "\n" not in head:
                 sender = head.strip()
                 content = rest
-        sender = sender or talker
-        info = parse_message_content(content, row["local_type"], is_room)
+        # 微信 4.x 的 local_type 是位压缩的：低 32 位才是真实类型，
+        # 高位是 appmsg 子类型（如 57<<32|49 = 引用回复）。不掩码则引用/链接全部丢失。
+        lt = int(row["local_type"] or 0)
+        if lt > 0xFFFFFFFF:
+            lt = lt & 0xFFFFFFFF
+        info = parse_message_content(content, lt, is_room)
         ts = int(row["create_time"] or 0)
+        try:
+            sender_wxid = (n2id or {}).get(int(row["real_sender_id"] or 0), "")
+        except (TypeError, ValueError):
+            sender_wxid = ""
         return Message(
             seq=int(row["sort_seq"] or 0),
             ts=ts,
             talker=talker,
-            sender_wxid="",
+            sender_wxid=sender_wxid,
             sender=sender,
-            is_self=not is_room and sender == talker,
-            local_type=int(row["local_type"] or 0),
+            is_self=(not is_room and sender == talker) or bool(sender_wxid and sender_wxid == talker),
+            local_type=lt,
             kind=info["kind"],
             text=info["text"],
             mentions=info["mentions"],
             quote_name=info["quote_name"],
             quote_text=info["quote_text"],
+            quote_wxid=info.get("quote_wxid", ""),
             raw=content[:4000],
         )
 

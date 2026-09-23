@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 import threading
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -22,6 +24,9 @@ app = FastAPI(title="群像谱 · 微信聊天记录分析")
 _wx = None
 _keys = None
 _lock = threading.Lock()
+
+SCAN_FILE = C.DATA_DIR / "scan.json"
+_scan_state = {"running": False, "done": 0, "total": 0, "error": "", "started": 0}
 
 
 def _pick_account():
@@ -141,3 +146,91 @@ def report(fname: str):
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+
+# --------------------------------------------------------------------------
+# 批量扫描：把全部会话各算一份轻量档案
+# --------------------------------------------------------------------------
+def _new_wx():
+    """为后台线程新建一个数据访问实例（sqlite 连接跟随创建线程）。"""
+    acc = _pick_account()
+    if acc is None:
+        raise RuntimeError("未找到微信账号数据目录")
+    keys = extract_keys.ensure_keys(acc.data_dir, log=print)
+    if not keys:
+        raise RuntimeError("未获取到数据库密钥，请确认微信已登录")
+    return schema.WxV4(acc.data_dir, keys, log=print)
+
+
+def _run_scan(talkers: list[str], max_msgs: int, min_msgs: int) -> None:
+    try:
+        wx = _new_wx()
+        out: list[dict] = []
+        _scan_state["total"] = len(talkers)
+        for i, t in enumerate(talkers, 1):
+            try:
+                q = analyze.quick_profile(wx, t, max_msgs=max_msgs)
+                if ((q.get("meta") or {}).get("total_msgs") or 0) >= min_msgs:
+                    out.append(q)
+            except Exception as e:  # 单个会话失败不影响整体
+                print(f"  scan skip {t}: {e}")
+            _scan_state["done"] = i
+            if i % 10 == 0:  # 边跑边落盘，前端可看到进度
+                SCAN_FILE.write_text(
+                    json.dumps(out, ensure_ascii=False), encoding="utf-8")
+        SCAN_FILE.write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+    except Exception as e:
+        _scan_state["error"] = str(e)
+    finally:
+        _scan_state["running"] = False
+
+
+class ScanReq(BaseModel):
+    kinds: list[str] | None = None      # group / contact / official
+    min_msgs: int = 50                  # 消息太少的不扫
+    limit: int = 0                      # 0 = 不限
+    max_msgs: int = 20000               # 每个会话最多回看多少条
+
+
+@app.post("/api/scan")
+def start_scan(req: ScanReq):
+    if _scan_state["running"]:
+        return {"ok": False, "msg": "已有扫描在进行中"}
+    wx = get_wx()
+    rooms = wx.chatrooms()
+    contacts = wx.contacts()
+    talkers: list[str] = []
+    for s in wx.sessions():
+        u = s["username"]
+        kind, _ = _chat_label(u, wx.display_name(u, contacts))
+        if req.kinds and kind not in req.kinds:
+            continue
+        talkers.append(u)
+    if req.limit:
+        talkers = talkers[: req.limit]
+
+    _scan_state.update(running=True, done=0, total=len(talkers), error="",
+                       started=time.time())
+    threading.Thread(target=_run_scan, args=(talkers, req.max_msgs, req.min_msgs),
+                     daemon=True).start()
+    return {"ok": True, "total": len(talkers)}
+
+
+@app.get("/api/scan/status")
+def scan_status():
+    return dict(_scan_state)
+
+
+@app.get("/api/scan")
+def get_scan():
+    if not SCAN_FILE.exists():
+        return []
+    try:
+        return json.loads(SCAN_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+
+@app.get("/overview", response_class=HTMLResponse)
+def overview():
+    return FileResponse(C.STATIC_DIR / "overview.html")

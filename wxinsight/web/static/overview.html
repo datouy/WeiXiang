@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>全部会话档案 · 群像谱</title>
+<style>
+:root{--bg:#EEF0F2;--surface:#fff;--line:#DDE1E5;--ink:#15181C;--muted:#6B737E;--accent:#0E6E6C;--self:#A8322A}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 80px}
+h1{font-size:26px;margin:6px 0 4px}
+.lede{color:var(--muted);font-size:14px;margin:0 0 18px;line-height:1.7}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.search{flex:1;min-width:220px;padding:11px 14px;font-size:14px;border:1px solid var(--line);border-radius:10px;outline:none;background:#fff}
+.search:focus{border-color:var(--accent)}
+.tab{padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:13px;color:var(--muted)}
+.tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{padding:9px 18px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:14px;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+.sel{padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px}
+.status{font-size:13px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:top}
+th{background:#F7F8F9;font-weight:600;font-size:12.5px;color:var(--muted);cursor:pointer;white-space:nowrap}
+th:hover{color:var(--accent)}
+tr:last-child td{border-bottom:none}
+tr.row{cursor:pointer}
+tr.row:hover{background:#F4F9F9}
+.nm{font-weight:600}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:5px;background:#E4E7EB;color:var(--muted);margin:1px 3px 1px 0;white-space:nowrap}
+.tag.hi{background:#D8EAE9;color:var(--accent)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tp{color:var(--muted);font-size:12.5px;line-height:1.55}
+.empty{padding:50px;text-align:center;color:var(--muted)}
+.foot{margin-top:18px;font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>全部会话档案</h1>
+  <p class="lede">每个会话一份独立档案，全部由它自己的聊天记录算出。点任意一行生成该会话的完整群像谱报告。</p>
+
+  <div class="bar">
+    <input class="search" id="q" placeholder="搜索群名 / 好友名 / 议题 / 性状…" autocomplete="off">
+    <select class="sel" id="sort">
+      <option value="msgs">按消息量</option>
+      <option value="speakers">按发言人数</option>
+      <option value="recent">按最近活跃</option>
+      <option value="rate">按互动密度</option>
+      <option value="name">按名称</option>
+    </select>
+    <div class="tab on" data-k="all">全部</div>
+    <div class="tab" data-k="group">群聊</div>
+    <div class="tab" data-k="contact">好友</div>
+    <button class="btn" id="scan">开始批量扫描</button>
+    <button class="btn ghost" id="analyzeAll" title="对当前筛选出的会话逐个生成完整报告">批量出报告</button>
+  </div>
+  <div class="bar"><span class="status" id="status">读取缓存…</span></div>
+
+  <table id="tbl"><thead><tr>
+    <th data-k="name">会话</th>
+    <th data-k="msgs">消息</th>
+    <th data-k="speakers">发言人</th>
+    <th data-k="rate">互动</th>
+    <th>这个会话是什么样的</th>
+    <th>高频议题</th>
+  </tr></thead><tbody id="tb"></tbody></table>
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+let rows = [], kind='all', sortKey='msgs';
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function poll(){
+  const s = await (await fetch('/api/scan/status')).json();
+  if(s.running){
+    $('#status').textContent = `扫描中 ${s.done}/${s.total} …（每完成 10 个会落盘一次）`;
+    setTimeout(poll, 1200);
+    if(s.done % 10 === 0) load();
+    return;
+  }
+  if(s.error){ $('#status').textContent = '扫描出错：'+s.error; return; }
+  await load();
+  $('#status').textContent = `共 ${rows.length} 个会话的档案（缓存于 data/scan.json）`;
+}
+
+async function load(){
+  rows = await (await fetch('/api/scan')).json();
+  render();
+}
+
+function val(r){
+  const m = r.meta||{}, p = r.profile||{};
+  return {
+    name: m.name||m.talker||'', msgs: m.total_msgs||0, speakers: m.speakers||0,
+    recent: m.last_ts||0, rate: p.reply_rate||0, talker: m.talker||'',
+    truncated: !!m.truncated,
+    traits: (p.traits||[]).map(t=>t.tag), topics: p.topics||[], kind: m.is_room?'group':'contact'
+  };
+}
+
+function render(){
+  const q = ($('#q').value||'').trim().toLowerCase();
+  let list = rows.map(val);
+  if(kind!=='all') list = list.filter(v => v.kind===kind);
+  if(q) list = list.filter(v =>
+    v.name.toLowerCase().includes(q) || v.talker.toLowerCase().includes(q) ||
+    v.traits.join(' ').toLowerCase().includes(q) || v.topics.join(' ').toLowerCase().includes(q));
+  const cmp = {
+    msgs:(a,b)=>b.msgs-a.msgs, speakers:(a,b)=>b.speakers-a.speakers,
+    recent:(a,b)=>b.recent-a.recent, rate:(a,b)=>b.rate-a.rate,
+    name:(a,b)=>a.name.localeCompare(b.name,'zh')
+  }[sortKey];
+  list.sort(cmp);
+  $('#tb').innerHTML = list.map(v => `<tr class="row" data-u="${esc(v.talker)}" data-n="${esc(v.name)}">
+    <td><div class="nm">${esc(v.name)}</div><div class="tp">${v.kind==='group'?'群聊':'好友'}${v.talker?(' · '+esc(v.talker)):''}</div></td>
+    <td class="num">${v.msgs.toLocaleString()}${v.truncated?'*':''}</td>
+    <td class="num">${v.speakers}</td>
+    <td class="num">${v.rate}%</td>
+    <td>${v.traits.length? v.traits.map(t=>`<span class="tag hi">${esc(t)}</span>`).join('') : '<span class="tag">样本偏薄</span>'}</td>
+    <td class="tp">${v.topics.slice(0,8).map(esc).join(' · ')||'—'}</td>
+  </tr>`).join('') || '<tr><td colspan="6" class="empty">还没有档案，点「开始批量扫描」</td></tr>';
+  $('#foot').textContent = `显示 ${list.length} / ${rows.length} 个会话　·　带 * 的消息数只统计了最近 2 万条（批量扫描的采样窗口），点开完整报告才是全量数据`;
+  document.querySelectorAll('tr.row').forEach(el => el.addEventListener('click', () => open1(el.dataset.u, el.dataset.n)));
+}
+
+async function open1(u,n){
+  if(!confirm(`生成「${n}」的完整群像谱报告？大群可能需要十几秒。`)) return;
+  const st = $('#status'); st.textContent = `正在分析「${n}」…`;
+  const r = await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({talker:u})});
+  const d = await r.json();
+  if(!r.ok){ alert('失败：'+(d.detail||'未知错误')); return; }
+  window.open(d.url,'_blank');
+  st.textContent = `「${n}」已生成`;
+}
+
+async function analyzeAll(){
+  const q = ($('#q').value||'').trim().toLowerCase();
+  let list = rows.map(val);
+  if(kind!=='all') list = list.filter(v => v.kind===kind);
+  if(q) list = list.filter(v => v.name.toLowerCase().includes(q) || v.traits.join(' ').toLowerCase().includes(q));
+  if(!list.length){ alert('没有可生成的会话'); return; }
+  if(!confirm(`将对筛选出的 ${list.length} 个会话逐个生成完整报告，耗时可能较长。继续？`)) return;
+  const st = $('#status');
+  for(let i=0;i<list.length;i++){
+    st.textContent = `批量生成 ${i+1}/${list.length}：${list[i].name}`;
+    try{
+      const r = await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({talker:list[i].talker})});
+      const d = await r.json();
+      if(r.ok) window.open(d.url,'_blank');
+    }catch(e){}
+  }
+  st.textContent = `批量生成完成：${list.length} 个会话`;
+}
+
+$('#q').addEventListener('input', render);
+$('#sort').addEventListener('change', e => { sortKey = e.target.value; render(); });
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on'); kind = t.dataset.k; render();
+}));
+document.querySelectorAll('th[data-k]').forEach(th => th.addEventListener('click', () => {
+  sortKey = th.dataset.k;
+  $('#sort').value = ['msgs','speakers','recent','rate','name'].includes(sortKey)?sortKey:'msgs';
+  render();
+}));
+$('#scan').addEventListener('click', async () => {
+  const b = $('#scan'); b.disabled = true; b.textContent='扫描中…';
+  const r = await (await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({kinds: kind==='all'?null:[kind], min_msgs:50, max_msgs:20000})})).json();
+  if(!r.ok){ alert(r.msg||'无法启动扫描'); b.disabled=false; b.textContent='开始批量扫描'; return; }
+  poll();
+});
+$('#analyzeAll').addEventListener('click', analyzeAll);
+poll();
+</script>
+</body>
+</html>

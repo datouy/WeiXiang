@@ -176,10 +176,12 @@ def compute_roles(
 
     if ranked:
         roles.setdefault(ranked[0][0], "hub")
-    # 关键人物：发言量前 25% 且影响力前 8 名
+    # 关键人物名额随群规模自适应：小群不该人人都被标成 key
+    n_spk = len(speakers)
+    key_n = max(2, min(8, int(n_spk * 0.25)))
     vol_ranked = [s for s, _ in speakers.most_common()]
-    cutoff = max(3, len(vol_ranked) // 4)
-    for s, _ in ranked[:8]:
+    cutoff = max(2, min(n_spk, int(n_spk * 0.25)))
+    for s, _ in ranked[:key_n]:
         roles.setdefault(s, "key")
     for s in vol_ranked[:cutoff]:
         roles.setdefault(s, "key")

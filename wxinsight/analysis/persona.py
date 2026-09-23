@@ -68,8 +68,10 @@ def build_personas(
         reply_in[b] += n
         reply_out[a] += n
     mention_in: Counter = Counter()
+    mention_out: Counter = Counter()
     for (a, b), n in network.mention_dir.items():
         mention_in[b] += n
+        mention_out[a] += n
 
     ranked = [s for s, _ in speakers.most_common()]
     total = sum(speakers.values()) or 1
@@ -117,7 +119,7 @@ def build_personas(
 
         desc = _describe(
             s, n, total, tops, best_partner, best_mutual, words, phrases, role,
-            self_name, reply_in[s], reply_out[s], mention_in[s], kind_c,
+            self_name, reply_in[s], reply_out[s], mention_in[s], mention_out[s], kind_c,
         )
         quote_msg, quote_n = quote_owner.get(s, ("", 0))
         personas[s] = {
@@ -133,6 +135,9 @@ def build_personas(
             "reply_in": reply_in[s],
             "reply_out": reply_out[s],
             "mention_in": mention_in[s],
+            "mention_out": mention_out[s],
+            "archetype": _archetype(n, total, tops, reply_in[s], reply_out[s],
+                                    mention_in[s], mention_out[s], kind_c, n / total * 100),
             "partner": best_partner,
             "mutual": best_mutual,
             "hints": hints,
@@ -216,9 +221,42 @@ def _best_sample(rs: list[Rec], words: list[str], network: Network) -> str:
     return best[0]
 
 
+def _archetype(
+    n, total, tops, reply_in, reply_out, mention_in, mention_out, kind_c, share,
+) -> str:
+    """按此人在本群的真实行为挑一个定位词 —— 不同群、不同人会得到不同结果。"""
+    sticker = kind_c.get("sticker", 0) / n * 100 if n else 0
+    image = kind_c.get("image", 0) / n * 100 if n else 0
+    voice = kind_c.get("voice", 0) / n * 100 if n else 0
+
+    if mention_in >= 20 and mention_out <= mention_in * 0.4:
+        return "被点名型 —— 常被别人 @，自己很少主动点名"
+    if reply_out >= 15 and reply_out >= reply_in * 1.6:
+        return "追问型 —— 常引用别人往下接话"
+    if reply_in >= 15 and reply_in >= reply_out * 1.6:
+        return "被接话型 —— 说出来的话常被别人引用"
+    if sticker >= 40:
+        return "表情包选手 —— 大部分发言是表情"
+    if image >= 40:
+        return "发图型 —— 主要用图片参与"
+    if voice >= 40:
+        return "语音型 —— 主要发语音（内容无法读取）"
+    if tops and tops[0][0] >= 22:
+        return "夜猫子 —— 活跃在深夜"
+    if tops and tops[0][0] <= 8:
+        return "早起党 —— 活跃在清晨"
+    if share >= 35:
+        return "独角戏 —— 一个人占了群里相当比例的发言"
+    if n <= max(5, total * 0.01):
+        return "偶尔冒泡 —— 零星发言，样本很薄"
+    if reply_in + reply_out + mention_in + mention_out == 0:
+        return "只说不听 —— 没有和任何人形成来回路"
+    return ""
+
+
 def _describe(
     name, n, total, tops, partner, mutual, words, phrases, role,
-    self_name, reply_in, reply_out, mention_in, kind_c,
+    self_name, reply_in, reply_out, mention_in, mention_out, kind_c,
 ) -> str:
     parts: list[str] = []
     share = n / total * 100
@@ -233,6 +271,8 @@ def _describe(
         parts.append(f"引用他人 {reply_out} 次")
     if mention_in:
         parts.append(f"被 @ {mention_in} 次")
+    if mention_out:
+        parts.append(f"主动 @ 他人 {mention_out} 次")
     dom = [(k, v) for k, v in kind_c.most_common(3) if k not in ("text",)]
     if dom and dom[0][1] > n * 0.25:
         labels = {"image": "图片", "sticker": "表情", "voice": "语音", "video": "视频",
@@ -240,6 +280,8 @@ def _describe(
         parts.append("内容以" + "、".join(labels.get(k, k) for k, _ in dom) + "为主")
     if phrases:
         parts.append("高频用语：" + "、".join(p for p, _ in phrases[:4]))
+
+    arch = _archetype(n, total, tops, reply_in, reply_out, mention_in, mention_out, kind_c, share)
     tail = {
         "hub": "—— 全群互动的重心。",
         "key": "—— 群里绕不开的活跃角色。",
@@ -248,4 +290,6 @@ def _describe(
         "meme": "—— 更多是被别人提起。",
         "member": "",
     }.get(role, "")
+    if arch:
+        tail = f"—— {arch}。" + (tail.lstrip("—") if tail else "")
     return "；".join(parts) + "。" + tail
