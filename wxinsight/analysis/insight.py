@@ -170,6 +170,35 @@ def _pos_hits(msg: str) -> list[str]:
     return [w for w in T.POS_WORDS if w.lower() in low]
 
 
+def _praise_stats(rs, speakers: set[str]) -> tuple[int, int]:
+    """某人「含夸奖词的消息」总数，以及其中「明确指向具体他人」的条数。
+
+    用来区分「真捧场」vs「行话/公告/感叹」：真捧场是抬举「人」——
+    用 @ 或引用钉住某个具体群友；而活动公告模板（含「可以」等）、游戏感叹
+    （「高手高手！」）、日常应答里的夸奖词并不指向任何人。只看词频会把发公告、
+    喊口号的人误标成「爱捧场」，所以必须过方向这一关。
+    """
+    pos_msgs = 0
+    directed = 0
+    for r in rs:
+        if r.kind not in ("text", "quote") or not r.text:
+            continue
+        if not _pos_hits(r.text):
+            continue
+        pos_msgs += 1
+        targets = set(r.mentions or ())
+        if r.quote_name:
+            targets.add(r.quote_name)
+        real = set()
+        for t in targets:
+            c = _canon_target(t, speakers)
+            if c and c != r.sender:
+                real.add(c)
+        if real:
+            directed += 1
+    return pos_msgs, directed
+
+
 # [强] / [偷笑] 这类是表情占位符不是人话，混进格式与复读统计会把结论带偏
 PLACEHOLDER_RE = re.compile(r"^\s*\[[^\]]{1,10}\]\s*$")
 
@@ -420,7 +449,8 @@ def style_lines(st: dict) -> list[str]:
     return out
 
 
-def person_traits(rs, st: dict, p: dict, active_days: int, span_days: int) -> list[dict]:
+def person_traits(rs, st: dict, p: dict, active_days: int, span_days: int,
+                  speakers: set[str] = frozenset()) -> list[dict]:
     """性格倾向：每个结论必须能落到具体数字，且是从他自己的行为里算出来的。"""
     out: list[dict] = []
     texts = _clean_texts(rs)
@@ -433,6 +463,10 @@ def person_traits(rs, st: dict, p: dict, active_days: int, span_days: int) -> li
     pos = sum(len(_pos_hits(t)) for t in texts)
     neg_rate = neg / len(texts) * 100
     pos_rate = pos / len(texts) * 100
+    # 方向判定：夸奖落没落在「具体的人」身上（@/引用真实群友）。
+    pos_msgs, directed = _praise_stats(rs, speakers)
+    p["praise_directed"] = directed
+    p["is_cheer"] = False
     if neg_rate >= 2.5 and neg_rate > pos_rate:
         out.append({
             "tag": "带刺",
@@ -446,10 +480,17 @@ def person_traits(rs, st: dict, p: dict, active_days: int, span_days: int) -> li
             "why": f"负面 {neg_rate:.0f} 处/百条、正面也有 {pos_rate:.0f} 处 —— 更像嘴上互怼又互捧，不是真翻脸。",
         })
     elif pos_rate >= 8 and pos_rate > neg_rate * 2:
-        out.append({
-            "tag": "爱捧场",
-            "why": f"每 100 条有 {pos_rate:.0f} 处夸奖/附和，负面只有 {neg_rate:.0f} 处。",
-        })
+        # 方向判定：夸奖必须「钉在具体的人身上」才算捧场，否则只是公告/行话/感叹。
+        # 例如反复发「【漫时光狼人杀俱乐部】…可以…」活动模板、或满屏「高手高手」
+        # 的人，夸奖词密度再高也不是在捧谁，不能标「爱捧场」。
+        if directed >= 2:
+            out.append({
+                "tag": "爱捧场",
+                "why": f"每 100 条有 {pos_rate:.0f} 处夸奖/附和，其中 {directed} 处是专门 @/引用具体的人捧场。",
+            })
+            p["is_cheer"] = True
+        # 否则：夸奖词多但不指向具体的人（活动公告模板 / 游戏感叹 / 语气词），
+        # 不贴「爱捧场」标签，避免把发公告、喊口号的人误判成捧场王。
 
     # ---- 主动性：他找别人，还是别人找他 ----
     ro, ri = p.get("reply_out", 0), p.get("reply_in", 0)
@@ -559,8 +600,12 @@ def person_desc(name, p: dict, st: dict, traits: list[dict],
             sents.append(f"带刺：每 100 条有 {neg5:.0f} 处攻击性用词，正面表达只有 {pos5:.0f} 处 —— 吵架是常态，不是偶发。")
         elif neg5 >= 2.5 and pos5 >= 5:
             sents.append(f"互损：负面 {neg5:.0f} 处、正面 {pos5:.0f} 处/百条 —— 又骂又捧，更像竞技群的嘴上互怼。")
-        elif pos5 >= 8 and pos5 > neg5:
-            sents.append(f"嘴甜：每 100 条有 {pos5:.0f} 处夸奖附和，攻击性用词 {neg5:.0f} 处。")
+        elif p.get("is_cheer"):
+            directed = p.get("praise_directed", 0)
+            sents.append(
+                f"嘴甜：每 100 条有 {pos5:.0f} 处夸奖附和，其中 {directed} 处是专门捧具体的人，"
+                f"攻击性用词 {neg5:.0f} 处。"
+            )
 
     # --- 打字方式 ---
     styles = style_lines(st)

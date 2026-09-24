@@ -67,6 +67,7 @@ def analyze(
     since: int | None = None,
     until: int | None = None,
     max_msgs: int = 0,
+    return_recs: bool = False,
 ) -> dict:
     is_room = talker.endswith("@chatroom")
 
@@ -221,7 +222,8 @@ def analyze(
             continue
         rs = [r for r in recs if r.sender == name]
         st = person_style(rs)
-        tr = person_traits(rs, st, p, len(act.get(name, ())), span_days)
+        tr = person_traits(rs, st, p, len(act.get(name, ())), span_days,
+                          speakers=set(speakers))
         p["style"] = style_lines(st)
         p["traits"] = tr
         p["style_raw"] = st
@@ -326,6 +328,7 @@ def analyze(
         "roster": roster,
         "ren": ren,
         "timeline": timeline,
+        "_recs": recs if return_recs else None,
     }
 
 
